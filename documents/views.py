@@ -7,6 +7,7 @@ from documents.serializers import DocumentCreateSerializer, DocumentSerializer
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
+    queryset = Document.objects.select_related("uploaded_by")
     permission_classes = (CanAccessDocument,)
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     search_fields = ("title", "description", "verification_code")
@@ -15,7 +16,10 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Document.objects.select_related("uploaded_by")
+        queryset = self.queryset
+
+        if getattr(self, "swagger_fake_view", False) or not user.is_authenticated:
+            return queryset.none()
 
         status = self.request.query_params.get("status")
         if status:
