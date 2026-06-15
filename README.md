@@ -799,6 +799,294 @@ Superuser is created with ADMIN role.
 - Superuser creation uses email
 - Authentication tests pass
 
+## Phase 4 Step-by-Step Plan: Document Module
+
+Phase 4 adds the main business object of the system: documents. This phase teaches file uploads, ownership rules, serializers, viewsets, filtering, and API tests.
+
+### Step 1: Confirm Authentication Is Healthy
+
+Run the existing checks before adding document code.
+
+```bash
+source venv/bin/activate
+python manage.py check
+python manage.py test
+```
+
+Success means:
+
+```text
+The authentication tests pass.
+Django reports no system check issues.
+```
+
+### Step 2: Design the Document Model
+
+Update `documents/models.py`.
+
+Planned fields:
+
+```text
+title
+file
+description
+verification_code
+status
+uploaded_by
+created_at
+updated_at
+```
+
+Initial statuses:
+
+```text
+PENDING
+UNDER_REVIEW
+APPROVED
+REJECTED
+```
+
+Important model rules:
+
+```text
+uploaded_by links to the custom user model.
+verification_code must be unique.
+new documents start as PENDING.
+file uploads are stored under a documents/ media folder.
+```
+
+### Step 3: Generate Verification Codes
+
+Add automatic verification code generation when a document is first created.
+
+Code requirements:
+
+```text
+unique
+hard to guess
+short enough to share
+safe for URLs
+```
+
+Example:
+
+```text
+ABC123XYZ
+```
+
+### Step 4: Create and Run Document Migrations
+
+After the model is ready:
+
+```bash
+python manage.py makemigrations documents
+python manage.py migrate
+```
+
+Success means:
+
+```text
+documents migration is created.
+Document table exists in the database.
+No auth model migration errors appear.
+```
+
+### Step 5: Register Document in Django Admin
+
+Update `documents/admin.py`.
+
+Admin should show useful fields:
+
+```text
+title
+status
+verification_code
+uploaded_by
+created_at
+updated_at
+```
+
+Useful admin filters:
+
+```text
+status
+created_at
+updated_at
+```
+
+### Step 6: Create Document Serializers
+
+Create `documents/serializers.py`.
+
+Planned serializers:
+
+```text
+DocumentSerializer
+DocumentCreateSerializer
+```
+
+Serializer rules:
+
+```text
+uploaded_by is read-only.
+verification_code is read-only.
+status is read-only for normal users.
+file is required on create.
+```
+
+### Step 7: Create Document Permissions
+
+Create `documents/permissions.py`.
+
+Planned permission behavior:
+
+```text
+Admins can view all documents.
+Officers can view documents for review.
+Users can view and manage only their own documents.
+Public visitors cannot access document management endpoints.
+```
+
+This builds on the `IsAdmin`, `IsOfficer`, and `IsDocumentOwner` concepts from Phase 3.
+
+### Step 8: Create the Document ViewSet
+
+Update `documents/views.py`.
+
+Use a DRF `ModelViewSet` for:
+
+```text
+list
+create
+retrieve
+partial_update
+destroy
+```
+
+Behavior rules:
+
+```text
+normal users see only their own documents.
+admins and officers can see all documents.
+new documents are assigned to request.user.
+```
+
+### Step 9: Wire Document URLs
+
+Update `documents/urls.py`.
+
+Use a DRF router.
+
+Target endpoints:
+
+```text
+POST   /api/documents/
+GET    /api/documents/
+GET    /api/documents/{id}/
+PATCH  /api/documents/{id}/
+DELETE /api/documents/{id}/
+```
+
+### Step 10: Validate File Upload Behavior
+
+Test document upload through:
+
+```text
+Swagger UI
+DRF APIClient
+manual multipart request
+```
+
+Validation rules to consider:
+
+```text
+file is required.
+title is required.
+only authenticated users can upload.
+uploaded files are saved under media/documents/.
+```
+
+### Step 11: Add Search, Filtering, and Ordering
+
+Add basic query features.
+
+Planned support:
+
+```text
+search by title
+filter by status
+order by created_at
+```
+
+Likely DRF tools:
+
+```text
+SearchFilter
+OrderingFilter
+```
+
+### Step 12: Add Pagination
+
+Configure default pagination for document lists.
+
+Planned behavior:
+
+```text
+document lists return paginated results.
+page size stays small for development.
+```
+
+This prepares the API for real-world document volumes.
+
+### Step 13: Add Document Tests
+
+Update `documents/tests.py`.
+
+Minimum tests:
+
+```text
+authenticated user can upload a document.
+anonymous user cannot upload a document.
+user can list only their own documents.
+admin can list all documents.
+document receives a verification code.
+document starts as PENDING.
+user can retrieve own document.
+user cannot retrieve another user's document.
+```
+
+### Step 14: Verify Swagger Documentation
+
+After the document endpoints are wired, confirm Swagger shows file upload fields.
+
+```bash
+python manage.py spectacular --file /tmp/secure-docs-schema.yml
+python manage.py runserver
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000/api/docs/
+```
+
+### Phase 4 Completion Checklist
+
+- `Document` model exists
+- verification code generation works
+- document migration is created and applied
+- document appears in Django admin
+- document serializers exist
+- ownership permissions exist
+- document viewset exists
+- document URLs are wired
+- authenticated users can upload files
+- users can only manage their own documents
+- admins and officers can review all documents
+- list endpoint supports search, filtering, ordering, and pagination
+- document tests pass
+- Swagger shows document endpoints
+
 ## API Documentation
 
 Run the development server:
@@ -851,14 +1139,12 @@ pip install -r requirements.txt
 
 ## Next Step
 
-Implement Phase 4 document management:
+Start Phase 4 document management with Step 1 and Step 2:
 
 ```text
-Document model
-Document serializer
-File uploads
-Document owner permissions
-Document CRUD endpoints
+Run current checks
+Design the Document model
+Add verification code generation
 ```
 
 After that, the next major milestone will be the verification workflow.
