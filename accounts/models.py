@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
 
@@ -26,7 +26,7 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-class User(AbstractBaseUser):
+class User(AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Admin"
         OFFICER = "OFFICER", "Verification Officer"
@@ -42,7 +42,6 @@ class User(AbstractBaseUser):
     )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
 
     objects = UserManager()
