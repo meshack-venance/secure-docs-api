@@ -28,7 +28,7 @@ https://verify.company.com/doc/ABC123XYZ
 
 ## Current Status
 
-Phase 1 environment setup has started.
+Phase 2 project architecture is in progress.
 
 Current files:
 
@@ -36,6 +36,11 @@ Current files:
 requirements.txt
 venv/
 README.md
+manage.py
+config/
+accounts/
+documents/
+audits/
 ```
 
 Installed packages:
@@ -45,7 +50,7 @@ Django 5.2.15
 Django REST Framework 3.17.1
 ```
 
-The next step is to design the Django project architecture and folder structure before creating models or endpoints.
+The current step is finishing the project architecture before creating authentication models or endpoints.
 
 ## Learning Goals
 
@@ -490,7 +495,6 @@ After creating the project and apps, run:
 
 ```bash
 python manage.py check
-python manage.py migrate
 python manage.py runserver
 ```
 
@@ -502,6 +506,8 @@ The local server opens.
 The app structure is ready for custom user work.
 ```
 
+Do not run the first database migration until the custom user model is created in Phase 3.
+
 ### Phase 2 Completion Checklist
 
 - Django project created as `config`
@@ -509,7 +515,7 @@ The app structure is ready for custom user work.
 - `accounts`, `documents`, and `audits` apps exist
 - Apps are registered in `INSTALLED_APPS`
 - `python manage.py check` passes
-- Initial migrations run successfully
+- Initial migrations are intentionally deferred until the custom user model exists
 - URL strategy is clear
 - Media upload strategy is clear
 - Custom user model direction is decided before Phase 3
