@@ -28,13 +28,12 @@ https://verify.company.com/doc/ABC123XYZ
 
 ## Current Status
 
-Phase 2 project architecture is in progress.
+Phase 3 authentication is complete.
 
 Current files:
 
 ```text
 requirements.txt
-venv/
 README.md
 manage.py
 config/
@@ -48,9 +47,11 @@ Installed packages:
 ```text
 Django 5.2.15
 Django REST Framework 3.17.1
+djangorestframework-simplejwt 5.5.1
+drf-spectacular 0.29.0
 ```
 
-The current step is finishing the project architecture before creating authentication models or endpoints.
+The next major step is Phase 4: building the document upload module.
 
 ## Learning Goals
 
@@ -92,13 +93,22 @@ Can verify document authenticity without logging in.
 
 ### Authentication
 
-Planned endpoints:
+Implemented endpoints:
 
 ```text
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/refresh
-GET  /api/auth/profile
+POST /api/auth/register/
+POST /api/auth/login/
+POST /api/auth/refresh/
+GET  /api/auth/profile/
+```
+
+### API Documentation
+
+Swagger/OpenAPI documentation is available through `drf-spectacular`.
+
+```text
+GET /api/schema/
+GET /api/docs/
 ```
 
 ### Document Management
@@ -223,6 +233,7 @@ timestamp
 | Controller | ViewSet or APIView |
 | Spring Security | DRF Permissions |
 | JWT Filter | SimpleJWT |
+| Swagger / springdoc-openapi | drf-spectacular |
 | application.properties | settings.py and .env |
 | JPA | Django ORM |
 | Flyway | Migrations |
@@ -245,6 +256,7 @@ timestamp
 - Custom user model
 - Environment variables
 - Settings separation
+- Completed
 
 ### Phase 3: Authentication System
 
@@ -254,6 +266,7 @@ timestamp
 - Refresh tokens
 - Profile endpoint
 - Permissions
+- Completed
 
 ### Phase 4: Document Module
 
@@ -515,7 +528,7 @@ Do not run the first database migration until the custom user model is created i
 - `accounts`, `documents`, and `audits` apps exist
 - Apps are registered in `INSTALLED_APPS`
 - `python manage.py check` passes
-- Initial migrations are intentionally deferred until the custom user model exists
+- Initial migrations were deferred until the custom user model existed
 - URL strategy is clear
 - Media upload strategy is clear
 - Custom user model direction is decided before Phase 3
@@ -786,6 +799,32 @@ Superuser is created with ADMIN role.
 - Superuser creation uses email
 - Authentication tests pass
 
+## API Documentation
+
+Run the development server:
+
+```bash
+python manage.py runserver
+```
+
+Open Swagger UI:
+
+```text
+http://127.0.0.1:8000/api/docs/
+```
+
+Open the raw OpenAPI schema:
+
+```text
+http://127.0.0.1:8000/api/schema/
+```
+
+Generate the schema from the command line:
+
+```bash
+python manage.py spectacular --file /tmp/secure-docs-schema.yml
+```
+
 ## Local Setup
 
 Activate the virtual environment:
@@ -800,6 +839,8 @@ Check installed versions:
 python --version
 django-admin --version
 pip show djangorestframework
+pip show djangorestframework-simplejwt
+pip show drf-spectacular
 ```
 
 Install dependencies from `requirements.txt` if needed:
@@ -810,14 +851,14 @@ pip install -r requirements.txt
 
 ## Next Step
 
-Implement Phase 3 authentication:
+Implement Phase 4 document management:
 
 ```text
-Custom User Model
-JWT Login
-Registration
-Profile Endpoint
-Role Permissions
+Document model
+Document serializer
+File uploads
+Document owner permissions
+Document CRUD endpoints
 ```
 
-After that, the next major milestone will be the document upload module.
+After that, the next major milestone will be the verification workflow.
