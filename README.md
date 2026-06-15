@@ -520,6 +520,272 @@ Do not run the first database migration until the custom user model is created i
 - Media upload strategy is clear
 - Custom user model direction is decided before Phase 3
 
+## Phase 3 Step-by-Step Plan: Authentication System
+
+Phase 3 turns the project into a real API with users, roles, and token-based authentication. The most important rule is to create the custom user model before running the first migration.
+
+### Step 1: Confirm Phase 2 Is Clean
+
+Run the Django system check before editing authentication code.
+
+```bash
+source venv/bin/activate
+python manage.py check
+```
+
+Success means:
+
+```text
+System check identified no issues
+```
+
+### Step 2: Install JWT Support
+
+Add SimpleJWT for access and refresh tokens.
+
+```bash
+pip install djangorestframework-simplejwt
+pip freeze > requirements.txt
+```
+
+Why:
+
+```text
+DRF handles API structure.
+SimpleJWT handles token creation, refresh, and authentication.
+```
+
+### Step 3: Create the Custom User Model
+
+Update `accounts/models.py` with a custom user model.
+
+Planned fields:
+
+```text
+email
+first_name
+last_name
+role
+is_active
+is_staff
+date_joined
+```
+
+Planned roles:
+
+```text
+ADMIN
+OFFICER
+USER
+```
+
+Design decision:
+
+```text
+email will be the login field.
+username will not be used.
+```
+
+### Step 4: Create the User Manager
+
+Create a custom manager for user creation.
+
+Required methods:
+
+```text
+create_user(email, password, **extra_fields)
+create_superuser(email, password, **extra_fields)
+```
+
+Why:
+
+```text
+Django needs a manager that knows how to create normal users and admin users when email replaces username.
+```
+
+### Step 5: Register the Custom User in Settings
+
+Add this to `config/settings.py`:
+
+```python
+AUTH_USER_MODEL = "accounts.User"
+```
+
+This must happen before the first migration.
+
+### Step 6: Configure DRF Authentication
+
+Add REST framework authentication settings in `config/settings.py`.
+
+Planned configuration:
+
+```python
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+}
+```
+
+Why:
+
+```text
+Most API endpoints should require login by default.
+Public endpoints will explicitly allow anonymous access later.
+```
+
+### Step 7: Create Authentication Serializers
+
+Create `accounts/serializers.py`.
+
+Planned serializers:
+
+```text
+RegisterSerializer
+UserSerializer
+```
+
+Serializer responsibilities:
+
+```text
+RegisterSerializer -> validate input and create users
+UserSerializer     -> return safe profile data
+```
+
+Do not return password hashes in API responses.
+
+### Step 8: Create Authentication Views
+
+Update `accounts/views.py`.
+
+Planned views:
+
+```text
+RegisterView
+ProfileView
+```
+
+SimpleJWT will provide login and refresh views.
+
+### Step 9: Wire Authentication URLs
+
+Update `accounts/urls.py`.
+
+Planned endpoints:
+
+```text
+POST /api/auth/register/
+POST /api/auth/login/
+POST /api/auth/refresh/
+GET  /api/auth/profile/
+```
+
+Mapping:
+
+```text
+register/ -> custom RegisterView
+login/    -> SimpleJWT TokenObtainPairView
+refresh/  -> SimpleJWT TokenRefreshView
+profile/  -> custom ProfileView
+```
+
+### Step 10: Create Role-Based Permissions
+
+Create `accounts/permissions.py`.
+
+Planned permissions:
+
+```text
+IsAdmin
+IsOfficer
+IsDocumentOwner
+```
+
+These permissions will be used heavily in later phases when documents and verification workflows are built.
+
+### Step 11: Make and Run the First Migrations
+
+Only run migrations after the custom user model and `AUTH_USER_MODEL` are in place.
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Success means:
+
+```text
+accounts migration is created.
+Database tables are created.
+No custom user model errors appear.
+```
+
+### Step 12: Create a Superuser
+
+Create the first admin user.
+
+```bash
+python manage.py createsuperuser
+```
+
+Expected login field:
+
+```text
+Email
+```
+
+If Django asks for `Username`, the custom user setup is not correct yet.
+
+### Step 13: Test the Authentication Flow Manually
+
+Run the server.
+
+```bash
+python manage.py runserver
+```
+
+Manual checks:
+
+```text
+Register a user.
+Log in and receive access plus refresh tokens.
+Use the access token to call profile.
+Refresh the token successfully.
+```
+
+### Step 14: Add Authentication Tests
+
+Update `accounts/tests.py`.
+
+Minimum tests:
+
+```text
+User can register.
+User can log in.
+Authenticated user can view profile.
+Anonymous user cannot view profile.
+Superuser is created with ADMIN role.
+```
+
+### Phase 3 Completion Checklist
+
+- SimpleJWT installed and saved in `requirements.txt`
+- Custom email-based user model exists
+- Custom user manager exists
+- `AUTH_USER_MODEL` is configured
+- DRF uses JWT authentication
+- Register endpoint works
+- Login endpoint returns tokens
+- Refresh endpoint returns a new access token
+- Profile endpoint requires authentication
+- Role permission classes are started
+- First migrations are created and applied
+- Superuser creation uses email
+- Authentication tests pass
+
 ## Local Setup
 
 Activate the virtual environment:
@@ -544,14 +810,14 @@ pip install -r requirements.txt
 
 ## Next Step
 
-Design and create the project architecture:
+Implement Phase 3 authentication:
 
 ```text
-secure_docs_api/
-accounts/
-documents/
-audits/
-config/settings/
+Custom User Model
+JWT Login
+Registration
+Profile Endpoint
+Role Permissions
 ```
 
-After that, the first coding milestone will be creating a custom user model with roles.
+After that, the next major milestone will be the document upload module.
