@@ -1,5 +1,13 @@
+import secrets
+import string
+
 from django.conf import settings
 from django.db import models
+
+
+def generate_verification_code():
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(9))
 
 
 class Document(models.Model):
@@ -28,6 +36,19 @@ class Document(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
+
+    def save(self, *args, **kwargs):
+        if not self.verification_code:
+            self.verification_code = self._generate_unique_verification_code()
+
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def _generate_unique_verification_code(cls):
+        while True:
+            code = generate_verification_code()
+            if not cls.objects.filter(verification_code=code).exists():
+                return code
 
     def __str__(self):
         return self.title
