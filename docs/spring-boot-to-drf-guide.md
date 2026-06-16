@@ -36,11 +36,11 @@ DRF does not force a service layer early. It gives you strong tools for HTTP API
 | --- | --- | --- |
 | `@SpringBootApplication` | Django project package | `config/` |
 | `application.properties` / `.yml` | settings module | `config/settings.py` |
-| Controller | View / ViewSet | `accounts/views.py`, `documents/views.py` |
-| `@RequestMapping` / `@GetMapping` | `path()` / router | `accounts/urls.py`, `documents/urls.py` |
+| Controller | View / ViewSet | `authentication/views.py`, `accounts/views.py`, `documents/views.py` |
+| `@RequestMapping` / `@GetMapping` | `path()` / router | `authentication/urls.py`, `accounts/urls.py`, `documents/urls.py` |
 | Entity | Model | `accounts/models.py`, `documents/models.py` |
 | Repository | Django ORM manager/queryset | `Document.objects.filter(...)` |
-| DTO | Serializer | `accounts/serializers.py`, `documents/serializers.py` |
+| DTO | Serializer | `authentication/serializers.py`, `accounts/serializers.py`, `documents/serializers.py` |
 | Bean validation | Serializer validation | `serializers.CharField(...)`, `validate_*` |
 | Spring Security | Authentication and permissions | SimpleJWT, `CanAccessDocument` |
 | `ResponseEntity` | `Response` | `rest_framework.response.Response` |
@@ -48,7 +48,7 @@ DRF does not force a service layer early. It gives you strong tools for HTTP API
 | Response wrapper DTO | Renderer / helper response | `common/renderers.py` |
 | Flyway / Liquibase | Django migrations | `*/migrations/` |
 | springdoc-openapi / Swagger | drf-spectacular | `/api/docs/` |
-| JUnit / MockMvc | Django test client / DRF APIClient | `accounts/tests.py`, `documents/tests.py` |
+| JUnit / MockMvc | Django test client / DRF APIClient | `authentication/tests.py`, `accounts/tests.py`, `documents/tests.py` |
 
 ## 3. Project Structure
 
@@ -64,6 +64,11 @@ secure-docs-api/
     urls.py
     asgi.py
     wsgi.py
+  authentication/
+    serializers.py
+    views.py
+    urls.py
+    tests.py
   accounts/
     models.py
     serializers.py
@@ -90,7 +95,7 @@ secure-docs-api/
   docs/
 ```
 
-Think of `config/` as the main application configuration. Think of `accounts/`, `documents/`, and `audits/` as domain modules, similar to packages in a Spring Boot project.
+Think of `config/` as the main application configuration. Think of `authentication/`, `accounts/`, `documents/`, and `audits/` as domain modules, similar to packages in a Spring Boot project.
 
 ## 4. Request Lifecycle
 
@@ -213,7 +218,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("api/auth/", include("accounts.urls")),
+    path("api/auth/", include("authentication.urls")),
+    path("api/accounts/", include("accounts.urls")),
     path("api/documents/", include("documents.urls")),
     path("api/audits/", include("audits.urls")),
 ]
@@ -229,6 +235,7 @@ Spring Boot comparison:
 In DRF, app-specific URL files keep each domain clean:
 
 ```text
+authentication/urls.py
 accounts/urls.py
 documents/urls.py
 ```
@@ -533,6 +540,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         return User.objects.create_user(password=password, **validated_data)
 ```
 
+This serializer lives in `authentication/serializers.py` because registration is an authentication workflow.
+
 This is important because passwords must be hashed with `set_password()`, not saved as plain text.
 
 Spring Boot comparison:
@@ -545,10 +554,10 @@ passwordEncoder.encode(request.getPassword())
 
 Views are like controllers.
 
-File:
+Authentication workflow file:
 
 ```text
-accounts/views.py
+authentication/views.py
 ```
 
 Example:
@@ -600,6 +609,8 @@ class RefreshTokenView(TokenRefreshView):
 These inherit token logic from SimpleJWT.
 
 ### Profile View
+
+Profile belongs to account data, so it lives in `accounts/views.py`.
 
 ```python
 class ProfileView(generics.RetrieveAPIView):
@@ -816,7 +827,7 @@ Endpoints:
 POST /api/auth/register/
 POST /api/auth/login/
 POST /api/auth/refresh/
-GET  /api/auth/profile/
+GET  /api/accounts/profile/
 ```
 
 Login response:
@@ -1355,6 +1366,9 @@ Then:
 
 ```text
 config/urls.py
+authentication/urls.py
+authentication/views.py
+authentication/serializers.py
 accounts/urls.py
 accounts/views.py
 accounts/serializers.py
@@ -1376,6 +1390,7 @@ Then:
 ```text
 common/renderers.py
 common/exceptions.py
+authentication/tests.py
 accounts/tests.py
 documents/tests.py
 ```

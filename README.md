@@ -38,6 +38,7 @@ README.md
 manage.py
 config/
 accounts/
+authentication/
 documents/
 audits/
 ```
@@ -112,7 +113,7 @@ Implemented endpoints:
 POST /api/auth/register/
 POST /api/auth/login/
 POST /api/auth/refresh/
-GET  /api/auth/profile/
+GET  /api/accounts/profile/
 ```
 
 ### API Documentation
@@ -429,6 +430,7 @@ Create separate apps for the main business areas.
 
 ```bash
 python manage.py startapp accounts
+python manage.py startapp authentication
 python manage.py startapp documents
 python manage.py startapp audits
 ```
@@ -436,9 +438,10 @@ python manage.py startapp audits
 App responsibilities:
 
 ```text
-accounts/  -> users, roles, authentication, permissions
-documents/ -> uploads, document metadata, verification workflow
-audits/    -> audit trail and activity history
+authentication/ -> register, login, refresh-token workflows
+accounts/       -> users, roles, profile, permissions
+documents/      -> uploads, document metadata, verification workflow
+audits/         -> audit trail and activity history
 ```
 
 ### Step 4: Register Apps in Settings
@@ -529,6 +532,7 @@ Target structure:
 
 ```text
 config/urls.py
+authentication/urls.py
 accounts/urls.py
 documents/urls.py
 audits/urls.py
@@ -538,6 +542,7 @@ Planned URL prefixes:
 
 ```text
 /api/auth/
+/api/accounts/
 /api/documents/
 /api/verify/
 /api/audits/
@@ -704,42 +709,37 @@ Most API endpoints should require login by default.
 Public endpoints will explicitly allow anonymous access later.
 ```
 
-### Step 7: Create Authentication Serializers
+### Step 7: Create Authentication and Account Serializers
 
-Create `accounts/serializers.py`.
+Create `authentication/serializers.py` and `accounts/serializers.py`.
 
 Planned serializers:
 
 ```text
-RegisterSerializer
-UserSerializer
-```
-
-Serializer responsibilities:
-
-```text
-RegisterSerializer -> validate input and create users
-UserSerializer     -> return safe profile data
+authentication.RegisterSerializer -> validate registration input and create users
+accounts.UserSerializer           -> return safe profile data
 ```
 
 Do not return password hashes in API responses.
 
-### Step 8: Create Authentication Views
+### Step 8: Create Authentication and Account Views
 
-Update `accounts/views.py`.
+Update `authentication/views.py` and `accounts/views.py`.
 
 Planned views:
 
 ```text
-RegisterView
-ProfileView
+authentication.RegisterView
+authentication.LoginView
+authentication.RefreshTokenView
+accounts.ProfileView
 ```
 
-SimpleJWT will provide login and refresh views.
+Login and refresh inherit from SimpleJWT views.
 
 ### Step 9: Wire Authentication URLs
 
-Update `accounts/urls.py`.
+Update `authentication/urls.py` and `accounts/urls.py`.
 
 Planned endpoints:
 
@@ -747,16 +747,16 @@ Planned endpoints:
 POST /api/auth/register/
 POST /api/auth/login/
 POST /api/auth/refresh/
-GET  /api/auth/profile/
+GET  /api/accounts/profile/
 ```
 
 Mapping:
 
 ```text
-register/ -> custom RegisterView
-login/    -> SimpleJWT TokenObtainPairView
-refresh/  -> SimpleJWT TokenRefreshView
-profile/  -> custom ProfileView
+authentication/register/ -> custom RegisterView
+authentication/login/    -> SimpleJWT LoginView
+authentication/refresh/  -> SimpleJWT RefreshTokenView
+accounts/profile/        -> custom ProfileView
 ```
 
 ### Step 10: Create Role-Based Permissions
@@ -825,7 +825,7 @@ Refresh the token successfully.
 
 ### Step 14: Add Authentication Tests
 
-Update `accounts/tests.py`.
+Update `authentication/tests.py` and `accounts/tests.py`.
 
 Minimum tests:
 

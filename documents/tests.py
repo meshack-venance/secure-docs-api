@@ -43,7 +43,7 @@ class DocumentAPITests(APITestCase):
 
     def authenticate(self, user):
         response = self.client.post(
-            reverse("accounts:login"),
+            reverse("authentication:login"),
             {"email": user.email, "password": self.password},
             format="json",
             HTTP_HOST="localhost",
