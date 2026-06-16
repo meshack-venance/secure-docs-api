@@ -1,9 +1,9 @@
 from rest_framework import filters, viewsets
 
 from accounts.models import User
-from documents.models import Document
+from documents.models import Category, Document
 from documents.permissions import CanAccessDocument
-from documents.serializers import DocumentCreateSerializer, DocumentSerializer
+from documents.serializers import CategorySerializer, DocumentCreateSerializer, DocumentSerializer
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
@@ -38,3 +38,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user)
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer

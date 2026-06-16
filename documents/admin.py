@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from documents.models import Document
+from documents.models import Category, Document
 
 
 @admin.register(Document)
@@ -16,3 +16,10 @@ class DocumentAdmin(admin.ModelAdmin):
     list_filter = ("status", "created_at", "updated_at")
     search_fields = ("title", "description", "verification_code", "uploaded_by__email")
     readonly_fields = ("verification_code", "created_at", "updated_at")
+
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "created_at")
+    search_fields = ("name",)

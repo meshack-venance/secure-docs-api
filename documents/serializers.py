@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from documents.models import Document
+from documents.models import Category, Document
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -54,3 +54,8 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ("id", "name", "description", "created_at")
+        read_only_fields = ("id", "created_at")
