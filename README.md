@@ -135,6 +135,9 @@ Refresh endpoint reads the refresh token from Authorization: Bearer <refresh_tok
 Old refresh tokens are blacklisted after rotation.
 Logout blacklists the submitted refresh token.
 JWT_SIGNING_KEY is read from the environment.
+Protected endpoints validate the token and load the current user from the database.
+Deleted, inactive, or invalid-role users cannot use old access tokens.
+Authorization decisions use the database user role, not a role claim from the token.
 ```
 
 ### API Documentation

@@ -21,6 +21,16 @@ class AuthenticationTests(APITestCase):
         self.login_url = reverse("authentication:login")
         self.refresh_url = reverse("authentication:refresh")
         self.logout_url = reverse("authentication:logout")
+        self.profile_url = reverse("accounts:profile")
+
+    def login_user(self, user):
+        response = self.client.post(
+            self.login_url,
+            {"email": user.email, "password": self.password},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+        return response_body(response)["data"]
 
     def test_user_can_register(self):
         response = self.client.post(
@@ -58,6 +68,73 @@ class AuthenticationTests(APITestCase):
         self.assertEqual(body["message"], "User logged in successfully")
         self.assertIn("access", body["data"])
         self.assertIn("refresh", body["data"])
+
+    def test_valid_access_token_uses_database_user(self):
+        user = User.objects.create_user(email=self.email, password=self.password)
+        tokens = self.login_user(user)
+
+        response = self.client.get(
+            self.profile_url,
+            HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION=f"Bearer {tokens['access']}",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["data"]["email"], self.email)
+
+    def test_deleted_user_cannot_use_old_access_token(self):
+        user = User.objects.create_user(email=self.email, password=self.password)
+        tokens = self.login_user(user)
+        user.delete()
+
+        response = self.client.get(
+            self.profile_url,
+            HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION=f"Bearer {tokens['access']}",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "User not found")
+        self.assertIsNone(body["data"])
+
+    def test_inactive_user_cannot_use_old_access_token(self):
+        user = User.objects.create_user(email=self.email, password=self.password)
+        tokens = self.login_user(user)
+        user.is_active = False
+        user.save(update_fields=("is_active",))
+
+        response = self.client.get(
+            self.profile_url,
+            HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION=f"Bearer {tokens['access']}",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "User is inactive")
+        self.assertIsNone(body["data"])
+
+    def test_user_with_invalid_database_role_cannot_use_access_token(self):
+        user = User.objects.create_user(email=self.email, password=self.password)
+        tokens = self.login_user(user)
+        User.objects.filter(id=user.id).update(role="INVALID")
+
+        response = self.client.get(
+            self.profile_url,
+            HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION=f"Bearer {tokens['access']}",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "User account has an invalid role")
+        self.assertIsNone(body["data"])
 
     def test_refresh_token_rotation_returns_new_refresh_token(self):
         User.objects.create_user(email=self.email, password=self.password)
