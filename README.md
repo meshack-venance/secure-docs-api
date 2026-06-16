@@ -178,14 +178,25 @@ view.response_messages -> sets success messages per ViewSet action
 
 ### Document Management
 
-Planned endpoints:
+Implemented endpoints:
 
 ```text
-POST   /api/documents
-GET    /api/documents
-GET    /api/documents/{id}
-PATCH  /api/documents/{id}
-DELETE /api/documents/{id}
+POST   /api/documents/
+GET    /api/documents/
+GET    /api/documents/{id}/
+PATCH  /api/documents/{id}/
+DELETE /api/documents/{id}/
+```
+
+Document create/update endpoints accept `multipart/form-data` so files can be uploaded from Swagger.
+
+Form-data fields:
+
+```text
+title
+file
+document_type
+description
 ```
 
 ### Verification Workflow
@@ -1098,7 +1109,7 @@ DELETE /api/documents/{id}/
 Test document upload through:
 
 ```text
-Swagger UI
+Swagger UI file picker
 DRF APIClient
 manual multipart request
 ```
@@ -1176,6 +1187,14 @@ Open:
 http://127.0.0.1:8000/api/docs/
 ```
 
+Expected Swagger behavior:
+
+```text
+POST /api/documents/ uses multipart/form-data.
+file is shown as a binary upload field.
+Swagger UI shows a file picker.
+```
+
 ### Phase 4 Completion Checklist
 
 - `Document` model exists
@@ -1191,7 +1210,7 @@ http://127.0.0.1:8000/api/docs/
 - admins and officers can review all documents
 - list endpoint supports search, filtering, ordering, and pagination
 - document tests pass
-- Swagger shows document endpoints
+- Swagger shows document endpoints with a file picker for uploads
 
 ## API Documentation
 

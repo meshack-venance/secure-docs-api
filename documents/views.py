@@ -9,6 +9,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts.models import User
@@ -156,6 +157,7 @@ INVALID_STATUS_EXAMPLE = {
     create=extend_schema(
         summary="Upload document",
         description="Upload a document file for verification.",
+        request={"multipart/form-data": DocumentCreateSerializer},
         examples=[
             OpenApiExample(
                 "Document upload request",
@@ -191,6 +193,7 @@ INVALID_STATUS_EXAMPLE = {
     update=extend_schema(
         summary="Update document",
         description="Replace editable document fields.",
+        request={"multipart/form-data": DocumentCreateSerializer},
         examples=[
             OpenApiExample(
                 "Document update request",
@@ -220,6 +223,7 @@ INVALID_STATUS_EXAMPLE = {
     partial_update=extend_schema(
         summary="Partially update document",
         description="Update one or more editable document fields.",
+        request={"multipart/form-data": DocumentCreateSerializer},
         examples=[
             OpenApiExample(
                 "Document patch request",
@@ -279,6 +283,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     queryset = Document.objects.select_related("uploaded_by", "reviewed_by")
     permission_classes = (CanAccessDocument,)
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     search_fields = ("title", "description", "verification_code")
     ordering_fields = ("created_at", "updated_at", "title", "status")
