@@ -273,22 +273,30 @@ review_notes
 
 ### Public Verification
 
-Planned endpoint:
+Implemented endpoint:
 
 ```text
-GET /api/verify/{verification_code}
+GET /api/verify/{verification_code}/
 ```
 
 Example response:
 
 ```json
 {
-  "verified": true,
-  "document_name": "Degree Certificate",
-  "status": "APPROVED",
-  "issued_date": "2026-06-15"
+  "success": true,
+  "message": "Document verified successfully",
+  "data": {
+    "verified": true,
+    "title": "Degree Certificate",
+    "document_type": "Certificate",
+    "verification_code": "AB12CD34E",
+    "status": "APPROVED",
+    "reviewed_at": "2026-06-16T10:30:00Z"
+  }
 }
 ```
+
+Public verification does not expose file URLs, user emails, reviewer emails, review notes, or internal user ids.
 
 ### Audit Logging
 
@@ -300,6 +308,8 @@ DOCUMENT_REVIEW_STARTED
 DOCUMENT_APPROVED
 DOCUMENT_REJECTED
 DOCUMENT_DELETED
+DOCUMENT_VERIFICATION_SUCCEEDED
+DOCUMENT_VERIFICATION_FAILED
 ```
 
 ## Planned Database Design
@@ -421,7 +431,8 @@ created_at
 - Verification codes
 - Public endpoint
 - Safe public response shape
-- Rate limiting
+- Audit logs for public verification attempts
+- Completed
 
 ### Phase 7: Audit Logging
 

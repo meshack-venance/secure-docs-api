@@ -7,10 +7,11 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from accounts.models import User
 from audits.models import AuditLog
@@ -23,6 +24,7 @@ from documents.serializers import (
     DocumentCreateSerializer,
     DocumentReviewSerializer,
     DocumentSerializer,
+    PublicDocumentVerificationSerializer,
 )
 
 
@@ -93,6 +95,129 @@ INVALID_STATUS_EXAMPLE = {
     "error": "INVALID_DOCUMENT_STATUS",
     "data": None,
 }
+
+PUBLIC_VERIFICATION_EXAMPLE = {
+    "verified": True,
+    "title": "Degree Certificate",
+    "document_type": "Certificate",
+    "verification_code": "AB12CD34E",
+    "status": "APPROVED",
+    "reviewed_at": "2026-06-16T10:30:00Z",
+}
+
+PUBLIC_VERIFICATION_NOT_APPROVED_EXAMPLE = {
+    "success": False,
+    "message": "Document is not approved for public verification",
+    "status": 400,
+    "error": "DOCUMENT_NOT_APPROVED_FOR_VERIFICATION",
+    "data": None,
+}
+
+PUBLIC_VERIFICATION_NOT_FOUND_EXAMPLE = {
+    "success": False,
+    "message": "Document could not be verified",
+    "status": 404,
+    "error": "DOCUMENT_VERIFICATION_NOT_FOUND",
+    "data": None,
+}
+
+
+@extend_schema(
+    auth=[],
+    summary="Verify document by code",
+    description="Publicly verify an approved document using its verification code.",
+    responses={
+        200: OpenApiResponse(
+            response=PublicDocumentVerificationSerializer,
+            description="Document verified successfully",
+            examples=[
+                OpenApiExample(
+                    "Verified document response",
+                    value={
+                        "success": True,
+                        "message": "Document verified successfully",
+                        "data": PUBLIC_VERIFICATION_EXAMPLE,
+                    },
+                ),
+            ],
+        ),
+        400: OpenApiResponse(
+            response=OpenApiTypes.OBJECT,
+            description="Document exists but is not approved",
+            examples=[
+                OpenApiExample(
+                    "Document not approved response",
+                    value=PUBLIC_VERIFICATION_NOT_APPROVED_EXAMPLE,
+                ),
+            ],
+        ),
+        404: OpenApiResponse(
+            response=OpenApiTypes.OBJECT,
+            description="Verification code not found",
+            examples=[
+                OpenApiExample(
+                    "Verification code not found response",
+                    value=PUBLIC_VERIFICATION_NOT_FOUND_EXAMPLE,
+                ),
+            ],
+        ),
+    },
+)
+class PublicDocumentVerificationView(APIView):
+    """Public verification endpoint; no login required and no private fields returned."""
+
+    authentication_classes = ()
+    permission_classes = (permissions.AllowAny,)
+    response_message = "Document verified successfully"
+
+    def get(self, request, verification_code):
+        try:
+            document = Document.objects.get(verification_code=verification_code)
+        except Document.DoesNotExist as exc:
+            self._write_failed_verification_log(verification_code)
+            raise SecureDocsException(
+                "Document could not be verified",
+                status_code=status.HTTP_404_NOT_FOUND,
+                error="DOCUMENT_VERIFICATION_NOT_FOUND",
+            ) from exc
+
+        if document.status != Document.Status.APPROVED:
+            self._write_failed_verification_log(
+                verification_code,
+                document=document,
+                reason="Document is not approved for public verification",
+            )
+            raise SecureDocsException(
+                "Document is not approved for public verification",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error="DOCUMENT_NOT_APPROVED_FOR_VERIFICATION",
+            )
+
+        write_audit_log(
+            user=None,
+            action=AuditLog.Action.DOCUMENT_VERIFICATION_SUCCEEDED,
+            entity="Document",
+            entity_id=document.id,
+            metadata={
+                "verification_code": verification_code,
+                "result": "VERIFIED",
+            },
+        )
+        serializer = PublicDocumentVerificationSerializer(document)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def _write_failed_verification_log(self, verification_code, document=None, reason=None):
+        write_audit_log(
+            user=None,
+            action=AuditLog.Action.DOCUMENT_VERIFICATION_FAILED,
+            entity="Document",
+            entity_id=document.id if document else 0,
+            metadata={
+                "verification_code": verification_code,
+                "result": "FAILED",
+                "reason": reason or "Verification code not found",
+            },
+        )
 
 
 @extend_schema_view(

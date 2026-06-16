@@ -9,6 +9,14 @@ class AuditLog(models.Model):
         DOCUMENT_REVIEW_STARTED = "DOCUMENT_REVIEW_STARTED", "Document review started"
         DOCUMENT_APPROVED = "DOCUMENT_APPROVED", "Document approved"
         DOCUMENT_REJECTED = "DOCUMENT_REJECTED", "Document rejected"
+        DOCUMENT_VERIFICATION_SUCCEEDED = (
+            "DOCUMENT_VERIFICATION_SUCCEEDED",
+            "Document verification succeeded",
+        )
+        DOCUMENT_VERIFICATION_FAILED = (
+            "DOCUMENT_VERIFICATION_FAILED",
+            "Document verification failed",
+        )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

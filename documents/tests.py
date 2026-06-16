@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -76,6 +77,9 @@ class DocumentAPITests(APITestCase):
 
     def review_url(self, document):
         return self.detail_url(document, "review")
+
+    def verify_url(self, verification_code):
+        return reverse("verify-document", kwargs={"verification_code": verification_code})
 
     def test_authenticated_user_can_upload_document(self):
         self.authenticate(self.user)
@@ -458,3 +462,85 @@ class DocumentAPITests(APITestCase):
         body = response_body(response)
         self.assertFalse(body["success"])
         self.assertIn("action", body["errors"])
+
+    def test_public_can_verify_approved_document(self):
+        document = self.create_document(self.user, title="Degree Certificate")
+        document.status = Document.Status.APPROVED
+        document.reviewed_by = self.officer
+        document.reviewed_at = timezone.now()
+        document.save(update_fields=("status", "reviewed_by", "reviewed_at", "updated_at"))
+
+        response = self.client.get(
+            self.verify_url(document.verification_code),
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "Document verified successfully")
+        self.assertTrue(body["data"]["verified"])
+        self.assertEqual(body["data"]["title"], "Degree Certificate")
+        self.assertEqual(body["data"]["verification_code"], document.verification_code)
+        self.assertEqual(body["data"]["status"], Document.Status.APPROVED)
+        self.assertNotIn("file", body["data"])
+        self.assertNotIn("uploaded_by_email", body["data"])
+        self.assertNotIn("reviewed_by_email", body["data"])
+        self.assertNotIn("review_notes", body["data"])
+        audit_log = AuditLog.objects.get(
+            action=AuditLog.Action.DOCUMENT_VERIFICATION_SUCCEEDED
+        )
+        self.assertIsNone(audit_log.user)
+        self.assertEqual(audit_log.entity_id, document.id)
+        self.assertEqual(audit_log.metadata["result"], "VERIFIED")
+
+    def test_public_cannot_verify_pending_document(self):
+        document = self.create_document(self.user)
+
+        response = self.client.get(
+            self.verify_url(document.verification_code),
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "Document is not approved for public verification")
+        self.assertEqual(body["error"], "DOCUMENT_NOT_APPROVED_FOR_VERIFICATION")
+        self.assertIsNone(body["data"])
+        audit_log = AuditLog.objects.get(action=AuditLog.Action.DOCUMENT_VERIFICATION_FAILED)
+        self.assertIsNone(audit_log.user)
+        self.assertEqual(audit_log.entity_id, document.id)
+        self.assertEqual(audit_log.metadata["result"], "FAILED")
+
+    def test_public_cannot_verify_rejected_document(self):
+        document = self.create_document(self.user)
+        document.status = Document.Status.REJECTED
+        document.save(update_fields=("status", "updated_at"))
+
+        response = self.client.get(
+            self.verify_url(document.verification_code),
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["error"], "DOCUMENT_NOT_APPROVED_FOR_VERIFICATION")
+
+    def test_public_unknown_verification_code_returns_not_found(self):
+        response = self.client.get(
+            self.verify_url("UNKNOWN123"),
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "Document could not be verified")
+        self.assertEqual(body["error"], "DOCUMENT_VERIFICATION_NOT_FOUND")
+        self.assertIsNone(body["data"])
+        audit_log = AuditLog.objects.get(action=AuditLog.Action.DOCUMENT_VERIFICATION_FAILED)
+        self.assertIsNone(audit_log.user)
+        self.assertEqual(audit_log.entity_id, 0)
+        self.assertEqual(audit_log.metadata["verification_code"], "UNKNOWN123")

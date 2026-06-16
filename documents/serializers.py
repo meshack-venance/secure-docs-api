@@ -98,6 +98,27 @@ class DocumentReviewSerializer(serializers.Serializer):
         return attrs
 
 
+class PublicDocumentVerificationSerializer(serializers.ModelSerializer):
+    """Safe public response for verification-code lookups."""
+
+    verified = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Document
+        fields = (
+            "verified",
+            "title",
+            "document_type",
+            "verification_code",
+            "status",
+            "reviewed_at",
+        )
+        read_only_fields = fields
+
+    def get_verified(self, obj) -> bool:
+        return obj.status == Document.Status.APPROVED
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
