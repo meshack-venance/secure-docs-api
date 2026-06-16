@@ -17,6 +17,7 @@ USER_EXAMPLE = {
 
 
 @extend_schema(
+    auth=[],
     summary="Register a new user",
     description="Create a Secure Docs user account using email and password.",
     examples=[
@@ -48,6 +49,7 @@ class RegisterView(generics.CreateAPIView):
 
 
 @extend_schema(
+    auth=[],
     summary="Log in user",
     description="Authenticate with email and password and receive JWT tokens.",
     examples=[
@@ -78,6 +80,7 @@ class LoginView(TokenObtainPairView):
 
 
 @extend_schema(
+    auth=[],
     summary="Refresh access token",
     description="Use a refresh token to receive a new access token.",
     examples=[
