@@ -71,9 +71,8 @@ class AuthenticationTests(APITestCase):
 
         response = self.client.post(
             self.refresh_url,
-            {"refresh": refresh_token},
-            format="json",
             HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION=f"Bearer {refresh_token}",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -96,10 +95,30 @@ class AuthenticationTests(APITestCase):
 
         self.client.post(
             self.refresh_url,
-            {"refresh": refresh_token},
+            HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION=f"Bearer {refresh_token}",
+        )
+        response = self.client.post(
+            self.refresh_url,
+            HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION=f"Bearer {refresh_token}",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertIsNone(body["data"])
+
+    def test_refresh_token_must_be_sent_as_bearer_header(self):
+        User.objects.create_user(email=self.email, password=self.password)
+        login_response = self.client.post(
+            self.login_url,
+            {"email": self.email, "password": self.password},
             format="json",
             HTTP_HOST="localhost",
         )
+        refresh_token = response_body(login_response)["data"]["refresh"]
+
         response = self.client.post(
             self.refresh_url,
             {"refresh": refresh_token},
@@ -110,7 +129,25 @@ class AuthenticationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         body = response_body(response)
         self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "Refresh token is required")
+        self.assertEqual(body["error"], "REFRESH_TOKEN_REQUIRED")
         self.assertIsNone(body["data"])
+        self.assertNotIn("errors", body)
+
+    def test_refresh_token_rejects_malformed_authorization_header(self):
+        response = self.client.post(
+            self.refresh_url,
+            HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION="Token invalid-refresh-token",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "Refresh token must be sent as a Bearer token")
+        self.assertEqual(body["error"], "INVALID_REFRESH_AUTH_HEADER")
+        self.assertIsNone(body["data"])
+        self.assertNotIn("errors", body)
 
     def test_authenticated_user_can_logout_with_refresh_token(self):
         User.objects.create_user(email=self.email, password=self.password)
@@ -155,9 +192,8 @@ class AuthenticationTests(APITestCase):
         )
         response = self.client.post(
             self.refresh_url,
-            {"refresh": tokens["refresh"]},
-            format="json",
             HTTP_HOST="localhost",
+            HTTP_AUTHORIZATION=f"Bearer {tokens['refresh']}",
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

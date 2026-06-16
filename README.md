@@ -117,11 +117,19 @@ POST /api/auth/logout/
 GET  /api/accounts/profile/
 ```
 
+Refresh request:
+
+```http
+POST /api/auth/refresh/
+Authorization: Bearer <refresh_token>
+```
+
 JWT behavior:
 
 ```text
 Access tokens expire quickly.
 Refresh tokens last longer and rotate on refresh.
+Refresh endpoint reads the refresh token from Authorization: Bearer <refresh_token>.
 Old refresh tokens are blacklisted after rotation.
 Logout blacklists the submitted refresh token.
 JWT_SIGNING_KEY is read from the environment.
@@ -802,7 +810,7 @@ authentication.RefreshTokenView
 accounts.ProfileView
 ```
 
-Login and refresh inherit from SimpleJWT views.
+Login inherits from SimpleJWT. Refresh uses a custom view so the refresh token can be read from the Bearer header.
 
 ### Step 9: Wire Authentication URLs
 
@@ -822,7 +830,7 @@ Mapping:
 ```text
 authentication/register/ -> custom RegisterView
 authentication/login/    -> SimpleJWT LoginView
-authentication/refresh/  -> SimpleJWT RefreshTokenView
+authentication/refresh/  -> custom RefreshTokenView with SimpleJWT refresh serializer
 accounts/profile/        -> custom ProfileView
 ```
 

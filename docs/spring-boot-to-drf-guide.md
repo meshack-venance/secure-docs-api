@@ -601,11 +601,11 @@ class LoginView(TokenObtainPairView):
 Refresh:
 
 ```python
-class RefreshTokenView(TokenRefreshView):
+class RefreshTokenView(APIView):
     response_message = "Token refreshed successfully"
 ```
 
-These inherit token logic from SimpleJWT.
+Login inherits token logic from SimpleJWT. Refresh uses a custom APIView that reads the refresh token from the Bearer header and then delegates validation/rotation to SimpleJWT's refresh serializer.
 
 ### Profile View
 
@@ -905,6 +905,13 @@ Authenticated request:
 
 ```http
 Authorization: Bearer access-token
+```
+
+Refresh request:
+
+```http
+POST /api/auth/refresh/
+Authorization: Bearer refresh-token
 ```
 
 Production JWT behavior in this project:

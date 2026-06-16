@@ -1,10 +1,17 @@
-from drf_spectacular.utils import OpenApiExample, extend_schema
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+)
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from common.exceptions import SecureDocsException
 from authentication.serializers import LogoutSerializer, RegisterSerializer
@@ -91,15 +98,31 @@ class LoginView(TokenObtainPairView):
 @extend_schema(
     auth=[],
     summary="Refresh access token",
-    description="Use a refresh token to receive a new access token.",
-    examples=[
-        OpenApiExample(
-            "Refresh request",
-            value={
-                "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh",
-            },
-            request_only=True,
+    description=(
+        "Use the refresh token from the Authorization header to receive a new "
+        "access token. Send it as: Authorization: Bearer <refresh_token>."
+    ),
+    request=None,
+    parameters=[
+        OpenApiParameter(
+            name="Authorization",
+            location=OpenApiParameter.HEADER,
+            required=True,
+            type=str,
+            description="Bearer refresh token. Example: Bearer eyJhbGciOiJIUzI1NiIs...",
         ),
+    ],
+    responses={
+        200: OpenApiResponse(
+            response=OpenApiTypes.OBJECT,
+            description="Token refreshed successfully",
+        ),
+        401: OpenApiResponse(
+            response=OpenApiTypes.OBJECT,
+            description="Refresh token is missing, malformed, invalid, or expired",
+        ),
+    },
+    examples=[
         OpenApiExample(
             "Refresh response",
             value={
@@ -114,10 +137,47 @@ class LoginView(TokenObtainPairView):
         ),
     ],
 )
-class RefreshTokenView(TokenRefreshView):
-    """Rotate refresh tokens according to SIMPLE_JWT settings in config/settings.py."""
+class RefreshTokenView(APIView):
+    """Rotate refresh tokens sent through the Bearer header."""
 
+    authentication_classes = ()
+    permission_classes = (permissions.AllowAny,)
     response_message = "Token refreshed successfully"
+
+    def post(self, request):
+        refresh_token = self._get_refresh_token_from_header(request)
+        serializer = TokenRefreshSerializer(data={"refresh": refresh_token})
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            raise SecureDocsException(
+                "Invalid or expired refresh token",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                error="INVALID_REFRESH_TOKEN",
+            ) from exc
+
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+    def _get_refresh_token_from_header(self, request):
+        # Normal JWT authentication expects an access token, so this endpoint parses manually.
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header:
+            raise SecureDocsException(
+                "Refresh token is required",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                error="REFRESH_TOKEN_REQUIRED",
+            )
+
+        parts = auth_header.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise SecureDocsException(
+                "Refresh token must be sent as a Bearer token",
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                error="INVALID_REFRESH_AUTH_HEADER",
+            )
+
+        return parts[1]
 
 
 @extend_schema(
