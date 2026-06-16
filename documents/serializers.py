@@ -8,6 +8,10 @@ class DocumentSerializer(serializers.ModelSerializer):
         source="uploaded_by.email",
         read_only=True,
     )
+    reviewed_by_email = serializers.EmailField(
+        source="reviewed_by.email",
+        read_only=True,
+    )
 
     class Meta:
         model = Document
@@ -21,6 +25,10 @@ class DocumentSerializer(serializers.ModelSerializer):
             "status",
             "uploaded_by",
             "uploaded_by_email",
+            "reviewed_by",
+            "reviewed_by_email",
+            "reviewed_at",
+            "review_notes",
             "created_at",
             "updated_at",
         )
@@ -30,6 +38,10 @@ class DocumentSerializer(serializers.ModelSerializer):
             "status",
             "uploaded_by",
             "uploaded_by_email",
+            "reviewed_by",
+            "reviewed_by_email",
+            "reviewed_at",
+            "review_notes",
             "created_at",
             "updated_at",
         )
@@ -56,6 +68,18 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+
+class DocumentStartReviewSerializer(serializers.Serializer):
+    review_notes = serializers.CharField(required=False, allow_blank=True)
+
+
+class DocumentApproveSerializer(serializers.Serializer):
+    review_notes = serializers.CharField(required=False, allow_blank=True)
+
+
+class DocumentRejectSerializer(serializers.Serializer):
+    review_notes = serializers.CharField(required=True, allow_blank=False)
 
 
 class CategorySerializer(serializers.ModelSerializer):

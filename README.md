@@ -202,8 +202,17 @@ REJECTED
 Officer action endpoints:
 
 ```text
-POST /api/documents/{id}/approve
-POST /api/documents/{id}/reject
+POST /api/documents/{id}/start-review/
+POST /api/documents/{id}/approve/
+POST /api/documents/{id}/reject/
+```
+
+Review metadata stored on each document:
+
+```text
+reviewed_by
+reviewed_at
+review_notes
 ```
 
 ### Public Verification
@@ -348,6 +357,7 @@ timestamp
 - Rejection process
 - Status transitions
 - Business rules
+- In progress
 
 ### Phase 6: Public Verification API
 
@@ -926,6 +936,7 @@ Important model rules:
 uploaded_by links to the custom user model.
 verification_code must be unique.
 new documents start as PENDING.
+review fields are set by admins/officers during verification.
 file uploads are stored under a documents/ media folder.
 ```
 

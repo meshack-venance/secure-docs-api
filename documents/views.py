@@ -1,3 +1,5 @@
+from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,
@@ -5,15 +7,22 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
-from drf_spectacular.types import OpenApiTypes
 from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from accounts.models import User
 from common.exceptions import SecureDocsException
 from documents.models import Category, Document
 from documents.permissions import CanAccessDocument
-from documents.serializers import CategorySerializer, DocumentCreateSerializer, DocumentSerializer
+from documents.serializers import (
+    CategorySerializer,
+    DocumentApproveSerializer,
+    DocumentCreateSerializer,
+    DocumentRejectSerializer,
+    DocumentSerializer,
+    DocumentStartReviewSerializer,
+)
 
 
 DOCUMENT_EXAMPLE = {
@@ -26,6 +35,10 @@ DOCUMENT_EXAMPLE = {
     "status": "PENDING",
     "uploaded_by": 1,
     "uploaded_by_email": "meshackvenance99@gmail.com",
+    "reviewed_by": None,
+    "reviewed_by_email": None,
+    "reviewed_at": None,
+    "review_notes": "",
     "created_at": "2026-06-16T10:00:00Z",
     "updated_at": "2026-06-16T10:00:00Z",
 }
@@ -42,6 +55,14 @@ DOCUMENT_LIST_EXAMPLE = {
     "next": None,
     "previous": None,
     "results": [DOCUMENT_EXAMPLE],
+}
+
+REVIEW_REQUEST_EXAMPLE = {
+    "review_notes": "Document details match official records.",
+}
+
+REJECTION_REQUEST_EXAMPLE = {
+    "review_notes": "Certificate number could not be verified.",
 }
 
 CATEGORY_EXAMPLE = {
@@ -264,6 +285,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
         "update": "Document updated successfully",
         "partial_update": "Document updated successfully",
         "destroy": "Document deleted successfully",
+        "start_review": "Document review started successfully",
+        "approve": "Document approved successfully",
+        "reject": "Document rejected successfully",
     }
 
     def get_queryset(self):
@@ -295,6 +319,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "create":
             return DocumentCreateSerializer
+        if self.action == "start_review":
+            return DocumentStartReviewSerializer
+        if self.action == "approve":
+            return DocumentApproveSerializer
+        if self.action == "reject":
+            return DocumentRejectSerializer
 
         return DocumentSerializer
 
@@ -306,6 +336,186 @@ class DocumentViewSet(viewsets.ModelViewSet):
         # Return 200 so the global renderer can still emit the standard envelope.
         super().destroy(request, *args, **kwargs)
         return Response(None, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Start document review",
+        description="Move a pending document into review. Only admins and officers can do this.",
+        request=DocumentStartReviewSerializer,
+        examples=[
+            OpenApiExample(
+                "Start review request",
+                value=REVIEW_REQUEST_EXAMPLE,
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Review started response",
+                value={
+                    "success": True,
+                    "message": "Document review started successfully",
+                    "data": {
+                        **DOCUMENT_EXAMPLE,
+                        "status": "UNDER_REVIEW",
+                        "reviewed_by": 2,
+                        "reviewed_by_email": "officer@example.com",
+                        "reviewed_at": "2026-06-16T10:15:00Z",
+                        "review_notes": "Document details match official records.",
+                    },
+                },
+                response_only=True,
+            ),
+        ],
+    )
+    @action(detail=True, methods=["post"], url_path="start-review")
+    def start_review(self, request, pk=None):
+        document = self.get_object()
+        self._ensure_can_review(request.user)
+        self._ensure_pending(document)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self._apply_review_state(
+            document,
+            request.user,
+            Document.Status.UNDER_REVIEW,
+            serializer.validated_data.get("review_notes", ""),
+        )
+
+        return Response(DocumentSerializer(document, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Approve document",
+        description="Approve a pending or under-review document. Only admins and officers can do this.",
+        request=DocumentApproveSerializer,
+        examples=[
+            OpenApiExample(
+                "Approve request",
+                value=REVIEW_REQUEST_EXAMPLE,
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Approved response",
+                value={
+                    "success": True,
+                    "message": "Document approved successfully",
+                    "data": {
+                        **DOCUMENT_EXAMPLE,
+                        "status": "APPROVED",
+                        "reviewed_by": 2,
+                        "reviewed_by_email": "officer@example.com",
+                        "reviewed_at": "2026-06-16T10:30:00Z",
+                        "review_notes": "Document details match official records.",
+                    },
+                },
+                response_only=True,
+            ),
+        ],
+    )
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        document = self.get_object()
+        self._ensure_can_review(request.user)
+        self._ensure_decidable(document)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self._apply_review_state(
+            document,
+            request.user,
+            Document.Status.APPROVED,
+            serializer.validated_data.get("review_notes", ""),
+        )
+
+        return Response(DocumentSerializer(document, context={"request": request}).data)
+
+    @extend_schema(
+        summary="Reject document",
+        description="Reject a pending or under-review document. Review notes are required.",
+        request=DocumentRejectSerializer,
+        examples=[
+            OpenApiExample(
+                "Reject request",
+                value=REJECTION_REQUEST_EXAMPLE,
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Rejected response",
+                value={
+                    "success": True,
+                    "message": "Document rejected successfully",
+                    "data": {
+                        **DOCUMENT_EXAMPLE,
+                        "status": "REJECTED",
+                        "reviewed_by": 2,
+                        "reviewed_by_email": "officer@example.com",
+                        "reviewed_at": "2026-06-16T10:45:00Z",
+                        "review_notes": "Certificate number could not be verified.",
+                    },
+                },
+                response_only=True,
+            ),
+        ],
+    )
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        document = self.get_object()
+        self._ensure_can_review(request.user)
+        self._ensure_decidable(document)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self._apply_review_state(
+            document,
+            request.user,
+            Document.Status.REJECTED,
+            serializer.validated_data["review_notes"],
+        )
+
+        return Response(DocumentSerializer(document, context={"request": request}).data)
+
+    def _ensure_can_review(self, user):
+        if user.role not in (User.Role.ADMIN, User.Role.OFFICER):
+            raise SecureDocsException(
+                "Only admins and officers can review documents",
+                status_code=status.HTTP_403_FORBIDDEN,
+                error="DOCUMENT_REVIEW_FORBIDDEN",
+            )
+
+    def _ensure_pending(self, document):
+        if document.status != Document.Status.PENDING:
+            raise SecureDocsException(
+                "Only pending documents can enter review",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error="DOCUMENT_NOT_PENDING",
+            )
+
+    def _ensure_decidable(self, document):
+        if document.status == Document.Status.APPROVED:
+            raise SecureDocsException(
+                "Approved documents cannot be reviewed again",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error="DOCUMENT_ALREADY_APPROVED",
+            )
+        if document.status == Document.Status.REJECTED:
+            raise SecureDocsException(
+                "Rejected documents cannot be reviewed again",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error="DOCUMENT_ALREADY_REJECTED",
+            )
+
+    def _apply_review_state(self, document, reviewer, next_status, review_notes):
+        document.status = next_status
+        document.reviewed_by = reviewer
+        document.reviewed_at = timezone.now()
+        document.review_notes = review_notes
+        document.save(
+            update_fields=(
+                "status",
+                "reviewed_by",
+                "reviewed_at",
+                "review_notes",
+                "updated_at",
+            )
+        )
 
 
 @extend_schema_view(

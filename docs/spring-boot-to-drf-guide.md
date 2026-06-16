@@ -763,6 +763,48 @@ Response:
 }
 ```
 
+### Document Workflow Actions
+
+Phase 5 adds custom ViewSet actions for the verification lifecycle:
+
+```text
+POST /api/documents/{id}/start-review/
+POST /api/documents/{id}/approve/
+POST /api/documents/{id}/reject/
+```
+
+These are not generic CRUD actions; they are business commands.
+
+Spring Boot comparison:
+
+```java
+@PostMapping("/{id}/approve")
+public DocumentDto approve(@PathVariable Long id, @RequestBody ReviewDto dto) {
+    return documentService.approve(id, dto);
+}
+```
+
+Current rules:
+
+```text
+Only ADMIN and OFFICER can review documents.
+start-review is allowed only from PENDING.
+approve is allowed from PENDING or UNDER_REVIEW.
+reject is allowed from PENDING or UNDER_REVIEW.
+APPROVED and REJECTED documents cannot be reviewed again.
+reject requires review_notes.
+```
+
+Review decisions save:
+
+```text
+reviewed_by
+reviewed_at
+review_notes
+```
+
+Invalid workflow transitions raise `SecureDocsException`, which is similar to throwing a custom HTTP exception from a Spring service.
+
 ## 13. Permissions
 
 Permissions are like Spring Security authorization rules.
