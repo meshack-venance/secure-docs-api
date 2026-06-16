@@ -1,4 +1,19 @@
+from rest_framework.exceptions import APIException
 from rest_framework.views import exception_handler
+
+
+class SecureDocsException(APIException):
+    status_code = 400
+    default_detail = "Request failed"
+    default_code = "bad_request"
+
+    def __init__(self, message=None, status_code=None, error=None):
+        if status_code is not None:
+            self.status_code = status_code
+
+        self.message = message or self.default_detail
+        self.error = error
+        super().__init__(detail=self.message, code=self.default_code)
 
 
 def custom_exception_handler(exc, context):
@@ -7,9 +22,14 @@ def custom_exception_handler(exc, context):
     if response is None:
         return response
 
+    message = _get_error_message(response.data)
+    error = getattr(exc, "error", None)
+
     response.data = {
         "success": False,
-        "message": _get_error_message(response.data),
+        "message": message,
+        "status": response.status_code,
+        "error": error,
         "data": None,
         "errors": response.data,
     }

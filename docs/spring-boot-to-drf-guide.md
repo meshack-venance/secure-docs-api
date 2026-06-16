@@ -942,6 +942,50 @@ DRF:
 "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler"
 ```
 
+### Custom SecureDocsException
+
+NestJS example:
+
+```ts
+throw new SecureDocsException(
+  "You are not authorized on this resource",
+  HttpStatus.UNAUTHORIZED,
+  "UNAUTHORIZED",
+);
+```
+
+DRF equivalent in this project:
+
+```python
+from rest_framework import status
+
+from common.exceptions import SecureDocsException
+
+
+raise SecureDocsException(
+    "You are not authorized on this resource",
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    error="UNAUTHORIZED",
+)
+```
+
+Response:
+
+```json
+{
+  "success": false,
+  "message": "You are not authorized on this resource",
+  "status": 401,
+  "error": "UNAUTHORIZED",
+  "data": null,
+  "errors": {
+    "detail": "You are not authorized on this resource"
+  }
+}
+```
+
+Use `SecureDocsException` when you want to stop a request intentionally from your own business logic, similar to throwing a custom `HttpException` in NestJS.
+
 ## 16. Filtering, Searching, Ordering, and Pagination
 
 In `DocumentViewSet`:
