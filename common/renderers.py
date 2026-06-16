@@ -2,6 +2,8 @@ from rest_framework.renderers import JSONRenderer
 
 
 class CustomJSONRenderer(JSONRenderer):
+    """Wrap API responses in the project's success/message/data envelope."""
+
     def render(self, data, accepted_media_type=None, renderer_context=None):
         renderer_context = renderer_context or {}
         response = renderer_context.get("response")
@@ -30,9 +32,11 @@ class CustomJSONRenderer(JSONRenderer):
         return super().render(data, accepted_media_type, renderer_context)
 
     def _should_skip_envelope(self, data, view):
+        # Some responses are already wrapped, especially custom exception output.
         if isinstance(data, dict) and {"success", "message", "data"}.issubset(data):
             return True
 
+        # Swagger/OpenAPI responses must stay in drf-spectacular's expected shape.
         view_module = getattr(view.__class__, "__module__", "")
         return view_module.startswith("drf_spectacular")
 

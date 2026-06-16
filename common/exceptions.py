@@ -3,6 +3,8 @@ from rest_framework.views import exception_handler
 
 
 class SecureDocsException(APIException):
+    """Project-level exception for business rules that should reach the API."""
+
     status_code = 400
     default_detail = "Request failed"
     default_code = "bad_request"
@@ -17,6 +19,7 @@ class SecureDocsException(APIException):
 
 
 def custom_exception_handler(exc, context):
+    """Convert DRF exceptions into the same error envelope clients always expect."""
     response = exception_handler(exc, context)
 
     if response is None:

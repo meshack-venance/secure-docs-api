@@ -4,6 +4,8 @@ from accounts.models import User
 
 
 class CanAccessDocument(permissions.BasePermission):
+    """Allow admins/officers globally while keeping user documents private."""
+
     def has_permission(self, request, view):
         return request.user.is_authenticated
 

@@ -249,6 +249,8 @@ INVALID_STATUS_EXAMPLE = {
     ),
 )
 class DocumentViewSet(viewsets.ModelViewSet):
+    """Document CRUD with ownership filtering and project response messages."""
+
     queryset = Document.objects.select_related("uploaded_by")
     permission_classes = (CanAccessDocument,)
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
@@ -268,6 +270,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = self.queryset
 
+        # Schema generation has no real user, so keep docs generation side-effect free.
         if getattr(self, "swagger_fake_view", False) or not user.is_authenticated:
             return queryset.none()
 
@@ -286,6 +289,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if user.role in (User.Role.ADMIN, User.Role.OFFICER):
             return queryset
 
+        # Normal users should never see documents uploaded by another account.
         return queryset.filter(uploaded_by=user)
 
     def get_serializer_class(self):
@@ -295,9 +299,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return DocumentSerializer
 
     def perform_create(self, serializer):
+        # Ownership comes from the JWT user, never from client-submitted data.
         serializer.save(uploaded_by=self.request.user)
 
     def destroy(self, request, *args, **kwargs):
+        # Return 200 so the global renderer can still emit the standard envelope.
         super().destroy(request, *args, **kwargs)
         return Response(None, status=status.HTTP_200_OK)
 
@@ -469,5 +475,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
     }
 
     def destroy(self, request, *args, **kwargs):
+        # Keep delete responses consistent with the project's response envelope.
         super().destroy(request, *args, **kwargs)
         return Response(None, status=status.HTTP_200_OK)

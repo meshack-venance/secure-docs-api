@@ -46,6 +46,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
+    # Email is the account identity throughout the API; usernames are not used.
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 

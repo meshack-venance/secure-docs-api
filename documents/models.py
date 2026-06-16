@@ -6,6 +6,7 @@ from django.db import models
 
 
 def generate_verification_code():
+    """Generate public-facing codes that are short enough to type manually."""
     alphabet = string.ascii_uppercase + string.digits
     return "".join(secrets.choice(alphabet) for _ in range(9))
 
@@ -39,6 +40,7 @@ class Document(models.Model):
         ordering = ("-created_at",)
 
     def save(self, *args, **kwargs):
+        # The verification code is assigned once so public links stay stable.
         if not self.verification_code:
             self.verification_code = self._generate_unique_verification_code()
 
@@ -46,6 +48,7 @@ class Document(models.Model):
 
     @classmethod
     def _generate_unique_verification_code(cls):
+        # Collisions are unlikely, but the database uniqueness rule still wins.
         while True:
             code = generate_verification_code()
             if not cls.objects.filter(verification_code=code).exists():
