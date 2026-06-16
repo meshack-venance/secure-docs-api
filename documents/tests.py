@@ -7,6 +7,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from audits.models import AuditLog
 from documents.models import Document
 
 
@@ -95,7 +96,13 @@ class DocumentAPITests(APITestCase):
         self.assertTrue(body["success"])
         self.assertEqual(body["message"], "Document uploaded successfully")
         self.assertEqual(Document.objects.count(), 1)
-        self.assertEqual(Document.objects.first().uploaded_by, self.user)
+        document = Document.objects.first()
+        self.assertEqual(document.uploaded_by, self.user)
+        audit_log = AuditLog.objects.get(action=AuditLog.Action.DOCUMENT_UPLOADED)
+        self.assertEqual(audit_log.user, self.user)
+        self.assertEqual(audit_log.entity, "Document")
+        self.assertEqual(audit_log.entity_id, document.id)
+        self.assertEqual(audit_log.metadata["status"], Document.Status.PENDING)
 
     def test_document_type_is_not_accepted_from_upload_body(self):
         self.authenticate(self.user)
@@ -265,6 +272,10 @@ class DocumentAPITests(APITestCase):
         self.assertEqual(body["message"], "Document deleted successfully")
         self.assertIsNone(body["data"])
         self.assertFalse(Document.objects.filter(id=document.id).exists())
+        audit_log = AuditLog.objects.get(action=AuditLog.Action.DOCUMENT_DELETED)
+        self.assertEqual(audit_log.user, self.user)
+        self.assertEqual(audit_log.entity_id, document.id)
+        self.assertEqual(audit_log.metadata["title"], document.title)
 
     def test_officer_can_start_document_review(self):
         document = self.create_document(self.user)
@@ -287,6 +298,10 @@ class DocumentAPITests(APITestCase):
         self.assertEqual(body["data"]["status"], Document.Status.UNDER_REVIEW)
         self.assertEqual(body["data"]["reviewed_by_email"], self.officer.email)
         self.assertEqual(body["data"]["review_notes"], "Initial review started.")
+        audit_log = AuditLog.objects.get(action=AuditLog.Action.DOCUMENT_REVIEW_STARTED)
+        self.assertEqual(audit_log.user, self.officer)
+        self.assertEqual(audit_log.entity_id, document.id)
+        self.assertEqual(audit_log.metadata["status"], Document.Status.UNDER_REVIEW)
 
     def test_officer_can_approve_pending_document(self):
         document = self.create_document(self.user)
@@ -312,6 +327,10 @@ class DocumentAPITests(APITestCase):
         self.assertEqual(document.reviewed_by, self.officer)
         self.assertIsNotNone(document.reviewed_at)
         self.assertEqual(document.review_notes, "Document details match official records.")
+        audit_log = AuditLog.objects.get(action=AuditLog.Action.DOCUMENT_APPROVED)
+        self.assertEqual(audit_log.user, self.officer)
+        self.assertEqual(audit_log.entity_id, document.id)
+        self.assertEqual(audit_log.metadata["review_notes"], document.review_notes)
 
     def test_normal_user_cannot_approve_document(self):
         document = self.create_document(self.user)
@@ -373,6 +392,10 @@ class DocumentAPITests(APITestCase):
         self.assertEqual(document.status, Document.Status.REJECTED)
         self.assertEqual(document.reviewed_by, self.officer)
         self.assertEqual(document.review_notes, "Certificate number could not be verified.")
+        audit_log = AuditLog.objects.get(action=AuditLog.Action.DOCUMENT_REJECTED)
+        self.assertEqual(audit_log.user, self.officer)
+        self.assertEqual(audit_log.entity_id, document.id)
+        self.assertEqual(audit_log.metadata["status"], Document.Status.REJECTED)
 
     def test_approved_document_cannot_be_rejected(self):
         document = self.create_document(self.user)

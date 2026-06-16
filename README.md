@@ -295,12 +295,11 @@ Example response:
 Actions to track:
 
 ```text
-Document Uploaded
-Status Changed
-Officer Approved
-Officer Rejected
-User Login
-Password Reset
+DOCUMENT_UPLOADED
+DOCUMENT_REVIEW_STARTED
+DOCUMENT_APPROVED
+DOCUMENT_REJECTED
+DOCUMENT_DELETED
 ```
 
 ## Planned Database Design
@@ -350,7 +349,8 @@ user
 action
 entity
 entity_id
-timestamp
+metadata
+created_at
 ```
 
 ## Spring Boot to DRF Mental Model
@@ -413,7 +413,8 @@ timestamp
 - Rejection process
 - Status transitions
 - Business rules
-- In progress
+- Audit events for document upload, review, approval, rejection, and deletion
+- Completed
 
 ### Phase 6: Public Verification API
 
@@ -425,8 +426,9 @@ timestamp
 ### Phase 7: Audit Logging
 
 - Audit model
-- Signals
-- Middleware
+- Admin visibility
+- Optional admin-only audit API
+- Optional middleware for request-level activity tracking
 - Activity tracking
 
 ### Phase 8: Testing

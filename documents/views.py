@@ -13,6 +13,8 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts.models import User
+from audits.models import AuditLog
+from audits.services import write_audit_log
 from common.exceptions import SecureDocsException
 from documents.models import Category, Document
 from documents.permissions import CanAccessDocument
@@ -302,11 +304,36 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Ownership comes from the JWT user, never from client-submitted data.
-        serializer.save(uploaded_by=self.request.user)
+        document = serializer.save(uploaded_by=self.request.user)
+        write_audit_log(
+            user=self.request.user,
+            action=AuditLog.Action.DOCUMENT_UPLOADED,
+            entity="Document",
+            entity_id=document.id,
+            metadata={
+                "title": document.title,
+                "status": document.status,
+                "verification_code": document.verification_code,
+            },
+        )
 
     def destroy(self, request, *args, **kwargs):
         # Return 200 so the global renderer can still emit the standard envelope.
+        document = self.get_object()
+        audit_metadata = {
+            "title": document.title,
+            "status": document.status,
+            "verification_code": document.verification_code,
+        }
+        document_id = document.id
         super().destroy(request, *args, **kwargs)
+        write_audit_log(
+            user=request.user,
+            action=AuditLog.Action.DOCUMENT_DELETED,
+            entity="Document",
+            entity_id=document_id,
+            metadata=audit_metadata,
+        )
         return Response(None, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -400,6 +427,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             next_status,
             serializer.validated_data.get("review_notes", ""),
         )
+        self._write_review_audit_log(document, request.user, action_name)
 
         return Response(DocumentSerializer(document, context={"request": request}).data)
 
@@ -430,6 +458,27 @@ class DocumentViewSet(viewsets.ModelViewSet):
             DocumentReviewSerializer.REJECT: "Document rejected successfully",
         }
         return messages[action_name]
+
+    def _get_review_audit_action(self, action_name):
+        actions = {
+            DocumentReviewSerializer.START_REVIEW: AuditLog.Action.DOCUMENT_REVIEW_STARTED,
+            DocumentReviewSerializer.APPROVE: AuditLog.Action.DOCUMENT_APPROVED,
+            DocumentReviewSerializer.REJECT: AuditLog.Action.DOCUMENT_REJECTED,
+        }
+        return actions[action_name]
+
+    def _write_review_audit_log(self, document, reviewer, action_name):
+        write_audit_log(
+            user=reviewer,
+            action=self._get_review_audit_action(action_name),
+            entity="Document",
+            entity_id=document.id,
+            metadata={
+                "status": document.status,
+                "review_notes": document.review_notes,
+                "verification_code": document.verification_code,
+            },
+        )
 
     def _ensure_can_review(self, user):
         if user.role not in (User.Role.ADMIN, User.Role.OFFICER):
