@@ -986,6 +986,39 @@ Response:
 
 Use `SecureDocsException` when you want to stop a request intentionally from your own business logic, similar to throwing a custom `HttpException` in NestJS.
 
+Use DRF's built-in errors for framework-level problems:
+
+```text
+serializer validation errors
+missing or invalid JWT token
+object not found
+unsupported HTTP method
+```
+
+Use `SecureDocsException` for project rules:
+
+```text
+invalid workflow transition
+role not allowed to perform a business action
+document cannot be verified because it is not approved
+invalid custom query parameter
+category cannot be deleted because it is still used
+```
+
+Current project example:
+
+```python
+status_filter = self.request.query_params.get("status")
+if status_filter:
+    allowed_statuses = {choice.value for choice in Document.Status}
+    if status_filter not in allowed_statuses:
+        raise SecureDocsException(
+            "Invalid document status filter",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            error="INVALID_DOCUMENT_STATUS",
+        )
+```
+
 ## 16. Filtering, Searching, Ordering, and Pagination
 
 In `DocumentViewSet`:

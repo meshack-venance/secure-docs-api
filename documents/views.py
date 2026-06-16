@@ -2,6 +2,7 @@ from rest_framework import filters, status, viewsets
 from rest_framework.response import Response
 
 from accounts.models import User
+from common.exceptions import SecureDocsException
 from documents.models import Category, Document
 from documents.permissions import CanAccessDocument
 from documents.serializers import CategorySerializer, DocumentCreateSerializer, DocumentSerializer
@@ -30,9 +31,17 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False) or not user.is_authenticated:
             return queryset.none()
 
-        status = self.request.query_params.get("status")
-        if status:
-            queryset = queryset.filter(status=status)
+        status_filter = self.request.query_params.get("status")
+        if status_filter:
+            allowed_statuses = {choice.value for choice in Document.Status}
+            if status_filter not in allowed_statuses:
+                raise SecureDocsException(
+                    "Invalid document status filter",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    error="INVALID_DOCUMENT_STATUS",
+                )
+
+            queryset = queryset.filter(status=status_filter)
 
         if user.role in (User.Role.ADMIN, User.Role.OFFICER):
             return queryset

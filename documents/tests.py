@@ -124,6 +124,23 @@ class DocumentAPITests(APITestCase):
         document_ids = {item["id"] for item in body["data"]["results"]}
         self.assertEqual(document_ids, {first_document.id, second_document.id})
 
+    def test_invalid_status_filter_returns_secure_docs_exception(self):
+        self.authenticate(self.user)
+
+        response = self.client.get(
+            self.list_url,
+            {"status": "INVALID"},
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], "Invalid document status filter")
+        self.assertEqual(body["status"], status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(body["error"], "INVALID_DOCUMENT_STATUS")
+        self.assertIsNone(body["data"])
+
     def test_document_receives_verification_code_and_pending_status(self):
         document = self.create_document(self.user)
 
