@@ -70,16 +70,26 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
         )
 
 
-class DocumentStartReviewSerializer(serializers.Serializer):
+class DocumentReviewSerializer(serializers.Serializer):
+    START_REVIEW = "START_REVIEW"
+    APPROVE = "APPROVE"
+    REJECT = "REJECT"
+    ACTION_CHOICES = (
+        (START_REVIEW, "Start review"),
+        (APPROVE, "Approve"),
+        (REJECT, "Reject"),
+    )
+
+    action = serializers.ChoiceField(choices=ACTION_CHOICES)
     review_notes = serializers.CharField(required=False, allow_blank=True)
 
+    def validate(self, attrs):
+        if attrs["action"] == self.REJECT and not attrs.get("review_notes"):
+            raise serializers.ValidationError(
+                {"review_notes": "Review notes are required when rejecting a document."}
+            )
 
-class DocumentApproveSerializer(serializers.Serializer):
-    review_notes = serializers.CharField(required=False, allow_blank=True)
-
-
-class DocumentRejectSerializer(serializers.Serializer):
-    review_notes = serializers.CharField(required=True, allow_blank=False)
+        return attrs
 
 
 class CategorySerializer(serializers.ModelSerializer):

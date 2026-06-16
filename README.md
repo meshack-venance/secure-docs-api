@@ -199,12 +199,33 @@ APPROVED
 REJECTED
 ```
 
-Officer action endpoints:
+Officer review endpoint:
 
 ```text
-POST /api/documents/{id}/start-review/
-POST /api/documents/{id}/approve/
-POST /api/documents/{id}/reject/
+POST /api/documents/{id}/review/
+```
+
+Request examples:
+
+```json
+{
+  "action": "START_REVIEW",
+  "review_notes": "Initial review started."
+}
+```
+
+```json
+{
+  "action": "APPROVE",
+  "review_notes": "Document details match official records."
+}
+```
+
+```json
+{
+  "action": "REJECT",
+  "review_notes": "Certificate number could not be verified."
+}
 ```
 
 Review metadata stored on each document:

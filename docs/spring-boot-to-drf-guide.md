@@ -765,22 +765,37 @@ Response:
 
 ### Document Workflow Actions
 
-Phase 5 adds custom ViewSet actions for the verification lifecycle:
+Phase 5 adds one custom ViewSet action for the verification lifecycle:
 
 ```text
-POST /api/documents/{id}/start-review/
-POST /api/documents/{id}/approve/
-POST /api/documents/{id}/reject/
+POST /api/documents/{id}/review/
 ```
 
-These are not generic CRUD actions; they are business commands.
+This is not a generic CRUD action; it is a business command endpoint.
+
+Request:
+
+```json
+{
+  "action": "APPROVE",
+  "review_notes": "Document details match official records."
+}
+```
+
+Allowed actions:
+
+```text
+START_REVIEW
+APPROVE
+REJECT
+```
 
 Spring Boot comparison:
 
 ```java
-@PostMapping("/{id}/approve")
-public DocumentDto approve(@PathVariable Long id, @RequestBody ReviewDto dto) {
-    return documentService.approve(id, dto);
+@PostMapping("/{id}/review")
+public DocumentDto review(@PathVariable Long id, @RequestBody ReviewDto dto) {
+    return documentService.review(id, dto);
 }
 ```
 
@@ -788,11 +803,11 @@ Current rules:
 
 ```text
 Only ADMIN and OFFICER can review documents.
-start-review is allowed only from PENDING.
-approve is allowed from PENDING or UNDER_REVIEW.
-reject is allowed from PENDING or UNDER_REVIEW.
+START_REVIEW is allowed only from PENDING.
+APPROVE is allowed from PENDING or UNDER_REVIEW.
+REJECT is allowed from PENDING or UNDER_REVIEW.
 APPROVED and REJECTED documents cannot be reviewed again.
-reject requires review_notes.
+REJECT requires review_notes.
 ```
 
 Review decisions save:

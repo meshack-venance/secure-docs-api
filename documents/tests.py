@@ -73,6 +73,9 @@ class DocumentAPITests(APITestCase):
 
         return reverse(name, kwargs={"pk": document.id})
 
+    def review_url(self, document):
+        return self.detail_url(document, "review")
+
     def test_authenticated_user_can_upload_document(self):
         self.authenticate(self.user)
 
@@ -209,8 +212,11 @@ class DocumentAPITests(APITestCase):
         self.authenticate(self.officer)
 
         response = self.client.post(
-            self.detail_url(document, "start-review"),
-            {"review_notes": "Initial review started."},
+            self.review_url(document),
+            {
+                "action": "START_REVIEW",
+                "review_notes": "Initial review started.",
+            },
             format="json",
             HTTP_HOST="localhost",
         )
@@ -228,8 +234,11 @@ class DocumentAPITests(APITestCase):
         self.authenticate(self.officer)
 
         response = self.client.post(
-            self.detail_url(document, "approve"),
-            {"review_notes": "Document details match official records."},
+            self.review_url(document),
+            {
+                "action": "APPROVE",
+                "review_notes": "Document details match official records.",
+            },
             format="json",
             HTTP_HOST="localhost",
         )
@@ -250,8 +259,11 @@ class DocumentAPITests(APITestCase):
         self.authenticate(self.user)
 
         response = self.client.post(
-            self.detail_url(document, "approve"),
-            {"review_notes": "Trying to self approve."},
+            self.review_url(document),
+            {
+                "action": "APPROVE",
+                "review_notes": "Trying to self approve.",
+            },
             format="json",
             HTTP_HOST="localhost",
         )
@@ -267,8 +279,8 @@ class DocumentAPITests(APITestCase):
         self.authenticate(self.officer)
 
         response = self.client.post(
-            self.detail_url(document, "reject"),
-            {},
+            self.review_url(document),
+            {"action": "REJECT"},
             format="json",
             HTTP_HOST="localhost",
         )
@@ -278,6 +290,30 @@ class DocumentAPITests(APITestCase):
         self.assertFalse(body["success"])
         self.assertIn("review_notes", body["errors"])
 
+    def test_officer_can_reject_pending_document(self):
+        document = self.create_document(self.user)
+        self.authenticate(self.officer)
+
+        response = self.client.post(
+            self.review_url(document),
+            {
+                "action": "REJECT",
+                "review_notes": "Certificate number could not be verified.",
+            },
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        document.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "Document rejected successfully")
+        self.assertEqual(body["data"]["status"], Document.Status.REJECTED)
+        self.assertEqual(document.status, Document.Status.REJECTED)
+        self.assertEqual(document.reviewed_by, self.officer)
+        self.assertEqual(document.review_notes, "Certificate number could not be verified.")
+
     def test_approved_document_cannot_be_rejected(self):
         document = self.create_document(self.user)
         document.status = Document.Status.APPROVED
@@ -285,8 +321,11 @@ class DocumentAPITests(APITestCase):
         self.authenticate(self.officer)
 
         response = self.client.post(
-            self.detail_url(document, "reject"),
-            {"review_notes": "Trying to reject after approval."},
+            self.review_url(document),
+            {
+                "action": "REJECT",
+                "review_notes": "Trying to reject after approval.",
+            },
             format="json",
             HTTP_HOST="localhost",
         )
@@ -304,8 +343,11 @@ class DocumentAPITests(APITestCase):
         self.authenticate(self.officer)
 
         response = self.client.post(
-            self.detail_url(document, "approve"),
-            {"review_notes": "Trying to approve after rejection."},
+            self.review_url(document),
+            {
+                "action": "APPROVE",
+                "review_notes": "Trying to approve after rejection.",
+            },
             format="json",
             HTTP_HOST="localhost",
         )
@@ -315,3 +357,19 @@ class DocumentAPITests(APITestCase):
         self.assertFalse(body["success"])
         self.assertEqual(body["message"], "Rejected documents cannot be reviewed again")
         self.assertEqual(body["error"], "DOCUMENT_ALREADY_REJECTED")
+
+    def test_invalid_review_action_returns_bad_request(self):
+        document = self.create_document(self.user)
+        self.authenticate(self.officer)
+
+        response = self.client.post(
+            self.review_url(document),
+            {"action": "INVALID", "review_notes": "Bad action."},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertIn("action", body["errors"])
