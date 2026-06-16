@@ -1,7 +1,6 @@
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     OpenApiExample,
-    OpenApiParameter,
     OpenApiResponse,
     extend_schema,
 )
@@ -96,22 +95,13 @@ class LoginView(TokenObtainPairView):
 
 
 @extend_schema(
-    auth=[],
+    auth=[{"jwtAuth": []}],
     summary="Refresh access token",
     description=(
-        "Use the refresh token from the Authorization header to receive a new "
-        "access token. Send it as: Authorization: Bearer <refresh_token>."
+        "Use Swagger Authorize with the refresh token as the Bearer token, "
+        "then call this endpoint to receive a new access token."
     ),
     request=None,
-    parameters=[
-        OpenApiParameter(
-            name="Authorization",
-            location=OpenApiParameter.HEADER,
-            required=True,
-            type=str,
-            description="Bearer refresh token. Example: Bearer eyJhbGciOiJIUzI1NiIs...",
-        ),
-    ],
     responses={
         200: OpenApiResponse(
             response=OpenApiTypes.OBJECT,

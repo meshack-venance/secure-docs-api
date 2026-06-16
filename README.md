@@ -124,6 +124,8 @@ POST /api/auth/refresh/
 Authorization: Bearer <refresh_token>
 ```
 
+In Swagger, use the normal **Authorize** button for this endpoint, but paste the refresh token instead of the access token.
+
 JWT behavior:
 
 ```text
