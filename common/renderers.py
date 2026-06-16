@@ -16,6 +16,7 @@ class CustomJSONRenderer(JSONRenderer):
         success = status_code < 400
 
         if success:
+            # Successful views return raw data; the renderer adds the shared envelope.
             data = {
                 "success": True,
                 "message": self._get_success_message(view),

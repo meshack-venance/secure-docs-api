@@ -21,6 +21,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password")
+        # Always go through create_user so Django hashes the password correctly.
         return User.objects.create_user(password=password, **validated_data)
 
 

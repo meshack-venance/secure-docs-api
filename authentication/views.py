@@ -48,6 +48,8 @@ USER_EXAMPLE = {
     ],
 )
 class RegisterView(generics.CreateAPIView):
+    """Create a user with DRF's generic create flow and the project response wrapper."""
+
     serializer_class = RegisterSerializer
     permission_classes = (permissions.AllowAny,)
     response_message = "User registered successfully"
@@ -81,6 +83,8 @@ class RegisterView(generics.CreateAPIView):
     ],
 )
 class LoginView(TokenObtainPairView):
+    """Use SimpleJWT's built-in credential check so token behavior stays standard."""
+
     response_message = "User logged in successfully"
 
 
@@ -111,6 +115,8 @@ class LoginView(TokenObtainPairView):
     ],
 )
 class RefreshTokenView(TokenRefreshView):
+    """Rotate refresh tokens according to SIMPLE_JWT settings in config/settings.py."""
+
     response_message = "Token refreshed successfully"
 
 
@@ -138,6 +144,8 @@ class RefreshTokenView(TokenRefreshView):
     ],
 )
 class LogoutView(APIView):
+    """Blacklist refresh tokens so logout invalidates future refresh attempts."""
+
     serializer_class = LogoutSerializer
     response_message = "User logged out successfully"
 
@@ -146,6 +154,7 @@ class LogoutView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
+            # SimpleJWT persists blacklisted tokens when token_blacklist is installed.
             token = RefreshToken(serializer.validated_data["refresh"])
             token.blacklist()
         except TokenError as exc:

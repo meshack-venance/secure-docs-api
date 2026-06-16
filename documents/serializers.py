@@ -4,6 +4,8 @@ from documents.models import Category, Document
 
 
 class DocumentSerializer(serializers.ModelSerializer):
+    """Full document representation returned by read and workflow endpoints."""
+
     uploaded_by_email = serializers.EmailField(
         source="uploaded_by.email",
         read_only=True,
@@ -48,6 +50,8 @@ class DocumentSerializer(serializers.ModelSerializer):
 
 
 class DocumentCreateSerializer(serializers.ModelSerializer):
+    """Request serializer for uploads and patches; server-managed fields stay hidden."""
+
     class Meta:
         model = Document
         fields = (
@@ -70,6 +74,8 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
 
 
 class DocumentReviewSerializer(serializers.Serializer):
+    """Command payload for the single document review endpoint."""
+
     START_REVIEW = "START_REVIEW"
     APPROVE = "APPROVE"
     REJECT = "REJECT"
@@ -83,6 +89,7 @@ class DocumentReviewSerializer(serializers.Serializer):
     review_notes = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs):
+        # Rejections need a reason because the notes become the reviewer audit trail.
         if attrs["action"] == self.REJECT and not attrs.get("review_notes"):
             raise serializers.ValidationError(
                 {"review_notes": "Review notes are required when rejecting a document."}

@@ -37,6 +37,7 @@ def custom_exception_handler(exc, context):
         "data": None,
     }
     if not isinstance(exc, SecureDocsException):
+        # Framework and serializer errors keep field-level details for clients.
         response.data["errors"] = errors
 
     return response

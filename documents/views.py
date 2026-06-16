@@ -249,7 +249,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
     queryset = Document.objects.select_related("uploaded_by", "reviewed_by")
     permission_classes = (CanAccessDocument,)
+    # JSON keeps command endpoints ergonomic; multipart/form-data enables file uploads.
     parser_classes = (JSONParser, MultiPartParser, FormParser)
+    # Document edits are partial-only in this API, so PUT/full replacement is disabled.
     http_method_names = ("get", "post", "patch", "delete", "head", "options")
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     search_fields = ("title", "description", "verification_code")
@@ -290,6 +292,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return queryset.filter(uploaded_by=user)
 
     def get_serializer_class(self):
+        # DRF calls this per action, similar to choosing different DTOs per controller method.
         if self.action == "create":
             return DocumentCreateSerializer
         if self.action == "review":
@@ -387,6 +390,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         action_name = serializer.validated_data["action"]
+        # Validate the transition before mutating the document.
         next_status = self._get_review_status(document, action_name)
         self.response_message = self._get_review_message(action_name)
 
@@ -400,6 +404,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return Response(DocumentSerializer(document, context={"request": request}).data)
 
     def _get_review_status(self, document, action_name):
+        # Keep status-transition rules in one place so every review action is consistent.
         if action_name == DocumentReviewSerializer.START_REVIEW:
             self._ensure_pending(document)
             return Document.Status.UNDER_REVIEW
@@ -457,6 +462,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
             )
 
     def _apply_review_state(self, document, reviewer, next_status, review_notes):
+        # Reviewer metadata is written with the decision so the audit trail stays attached.
         document.status = next_status
         document.reviewed_by = reviewer
         document.reviewed_at = timezone.now()

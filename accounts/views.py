@@ -31,8 +31,11 @@ USER_EXAMPLE = {
     ],
 )
 class ProfileView(generics.RetrieveAPIView):
+    """Return the JWT user without requiring a URL id parameter."""
+
     serializer_class = UserSerializer
     response_message = "User fetched successfully"
 
     def get_object(self):
+        # Equivalent to a Spring Security current-principal lookup.
         return self.request.user
