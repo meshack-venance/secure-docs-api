@@ -210,7 +210,6 @@ Form-data fields:
 ```text
 title
 file
-document_type
 description
 ```
 

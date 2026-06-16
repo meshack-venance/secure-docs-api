@@ -97,6 +97,25 @@ class DocumentAPITests(APITestCase):
         self.assertEqual(Document.objects.count(), 1)
         self.assertEqual(Document.objects.first().uploaded_by, self.user)
 
+    def test_document_type_is_not_accepted_from_upload_body(self):
+        self.authenticate(self.user)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                "title": "Degree Certificate",
+                "description": "Bachelor certificate",
+                "document_type": "Certificate",
+                "file": self.upload_file(),
+            },
+            format="multipart",
+            HTTP_HOST="localhost",
+        )
+
+        document = Document.objects.get()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(document.document_type, "")
+
     def test_anonymous_user_cannot_upload_document(self):
         response = self.client.post(
             self.list_url,

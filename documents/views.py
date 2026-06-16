@@ -45,7 +45,6 @@ DOCUMENT_EXAMPLE = {
 DOCUMENT_UPLOAD_EXAMPLE = {
     "title": "Degree Certificate",
     "file": "<binary file>",
-    "document_type": "Certificate",
     "description": "Bachelor degree certificate for Meshack Venance",
 }
 

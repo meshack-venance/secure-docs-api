@@ -54,7 +54,6 @@ class DocumentCreateSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "file",
-            "document_type",
             "description",
             "verification_code",
             "status",
