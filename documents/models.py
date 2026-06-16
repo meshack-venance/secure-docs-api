@@ -19,6 +19,7 @@ class Document(models.Model):
 
     title = models.CharField(max_length=255)
     file = models.FileField(upload_to="documents/")
+    document_type = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
     verification_code = models.CharField(max_length=12, unique=True, blank=True)
     status = models.CharField(
