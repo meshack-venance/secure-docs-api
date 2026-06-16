@@ -827,6 +827,7 @@ Endpoints:
 POST /api/auth/register/
 POST /api/auth/login/
 POST /api/auth/refresh/
+POST /api/auth/logout/
 GET  /api/accounts/profile/
 ```
 
@@ -848,6 +849,38 @@ Authenticated request:
 ```http
 Authorization: Bearer access-token
 ```
+
+Production JWT behavior in this project:
+
+```text
+access token  -> short-lived, sent as Authorization: Bearer <token>
+refresh token -> longer-lived, rotated on refresh, tracked in the database
+logout        -> blacklists the submitted refresh token
+```
+
+The blacklist tables come from SimpleJWT:
+
+```python
+INSTALLED_APPS = [
+    "rest_framework_simplejwt.token_blacklist",
+]
+```
+
+The production-style settings are:
+
+```python
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    "SIGNING_KEY": config("JWT_SIGNING_KEY", default=SECRET_KEY),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+```
+
+This is close to a Spring Boot setup where refresh tokens are stored or tracked server-side. The access token remains stateless; refresh tokens become revocable through the blacklist tables.
 
 Spring Boot comparison:
 

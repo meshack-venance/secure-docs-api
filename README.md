@@ -113,7 +113,18 @@ Implemented endpoints:
 POST /api/auth/register/
 POST /api/auth/login/
 POST /api/auth/refresh/
+POST /api/auth/logout/
 GET  /api/accounts/profile/
+```
+
+JWT behavior:
+
+```text
+Access tokens expire quickly.
+Refresh tokens last longer and rotate on refresh.
+Old refresh tokens are blacklisted after rotation.
+Logout blacklists the submitted refresh token.
+JWT_SIGNING_KEY is read from the environment.
 ```
 
 ### API Documentation
@@ -821,6 +832,8 @@ Register a user.
 Log in and receive access plus refresh tokens.
 Use the access token to call profile.
 Refresh the token successfully.
+Confirm the refresh response returns a new refresh token.
+Log out and confirm the refresh token cannot be reused.
 ```
 
 ### Step 14: Add Authentication Tests
@@ -832,6 +845,11 @@ Minimum tests:
 ```text
 User can register.
 User can log in.
+Refresh token rotation returns a new refresh token.
+Old refresh token cannot be reused after rotation.
+Authenticated user can log out.
+Logged-out refresh token cannot be reused.
+Anonymous user cannot log out.
 Authenticated user can view profile.
 Anonymous user cannot view profile.
 Superuser is created with ADMIN role.
@@ -846,7 +864,9 @@ Superuser is created with ADMIN role.
 - DRF uses JWT authentication
 - Register endpoint works
 - Login endpoint returns tokens
-- Refresh endpoint returns a new access token
+- Refresh endpoint returns a new access token and rotated refresh token
+- Old refresh tokens are blacklisted after rotation
+- Logout endpoint blacklists refresh tokens
 - Profile endpoint requires authentication
 - Role permission classes are started
 - First migrations are created and applied

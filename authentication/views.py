@@ -1,8 +1,13 @@
 from drf_spectacular.utils import OpenApiExample, extend_schema
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from authentication.serializers import RegisterSerializer
+from common.exceptions import SecureDocsException
+from authentication.serializers import LogoutSerializer, RegisterSerializer
 
 
 USER_EXAMPLE = {
@@ -98,6 +103,7 @@ class LoginView(TokenObtainPairView):
                 "message": "Token refreshed successfully",
                 "data": {
                     "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new-access",
+                    "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new-refresh",
                 },
             },
             response_only=True,
@@ -106,3 +112,47 @@ class LoginView(TokenObtainPairView):
 )
 class RefreshTokenView(TokenRefreshView):
     response_message = "Token refreshed successfully"
+
+
+@extend_schema(
+    summary="Log out user",
+    description="Blacklist a refresh token so it cannot be used again.",
+    request=LogoutSerializer,
+    examples=[
+        OpenApiExample(
+            "Logout request",
+            value={
+                "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh",
+            },
+            request_only=True,
+        ),
+        OpenApiExample(
+            "Logout response",
+            value={
+                "success": True,
+                "message": "User logged out successfully",
+                "data": None,
+            },
+            response_only=True,
+        ),
+    ],
+)
+class LogoutView(APIView):
+    serializer_class = LogoutSerializer
+    response_message = "User logged out successfully"
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            token = RefreshToken(serializer.validated_data["refresh"])
+            token.blacklist()
+        except TokenError as exc:
+            raise SecureDocsException(
+                "Invalid or expired refresh token",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error="INVALID_REFRESH_TOKEN",
+            ) from exc
+
+        return Response(None, status=status.HTTP_200_OK)
