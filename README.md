@@ -74,6 +74,16 @@ This project will cover:
 - Deployment
 - Production security
 
+## Learning Guide for Spring Boot Developers
+
+If you are coming from Spring Boot, read the dedicated DRF guide:
+
+```text
+docs/spring-boot-to-drf-guide.md
+```
+
+It explains this project from start to end by mapping Spring Boot concepts like Controller, Entity, Repository, DTO, Spring Security, ResponseEntity, ControllerAdvice, Flyway, and Swagger to their Django REST Framework equivalents.
+
 ## System Users
 
 ### Admin
