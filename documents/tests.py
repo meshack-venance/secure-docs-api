@@ -155,6 +155,7 @@ class DocumentAPITests(APITestCase):
         self.assertEqual(body["status"], status.HTTP_400_BAD_REQUEST)
         self.assertEqual(body["error"], "INVALID_DOCUMENT_STATUS")
         self.assertIsNone(body["data"])
+        self.assertNotIn("errors", body)
 
     def test_document_receives_verification_code_and_pending_status(self):
         document = self.create_document(self.user)
@@ -273,6 +274,7 @@ class DocumentAPITests(APITestCase):
         self.assertFalse(body["success"])
         self.assertEqual(body["message"], "Only admins and officers can review documents")
         self.assertEqual(body["error"], "DOCUMENT_REVIEW_FORBIDDEN")
+        self.assertNotIn("errors", body)
 
     def test_reject_requires_review_notes(self):
         document = self.create_document(self.user)
@@ -335,6 +337,7 @@ class DocumentAPITests(APITestCase):
         self.assertFalse(body["success"])
         self.assertEqual(body["message"], "Approved documents cannot be reviewed again")
         self.assertEqual(body["error"], "DOCUMENT_ALREADY_APPROVED")
+        self.assertNotIn("errors", body)
 
     def test_rejected_document_cannot_be_approved(self):
         document = self.create_document(self.user)
@@ -357,6 +360,7 @@ class DocumentAPITests(APITestCase):
         self.assertFalse(body["success"])
         self.assertEqual(body["message"], "Rejected documents cannot be reviewed again")
         self.assertEqual(body["error"], "DOCUMENT_ALREADY_REJECTED")
+        self.assertNotIn("errors", body)
 
     def test_invalid_review_action_returns_bad_request(self):
         document = self.create_document(self.user)

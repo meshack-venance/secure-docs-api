@@ -967,15 +967,29 @@ This project returns a consistent response shape:
 }
 ```
 
-Error response:
+Business error response:
 
 ```json
 {
   "success": false,
-  "message": "Authentication credentials were not provided.",
+  "message": "Only admins and officers can review documents",
+  "status": 403,
+  "error": "DOCUMENT_REVIEW_FORBIDDEN",
+  "data": null
+}
+```
+
+Validation error response:
+
+```json
+{
+  "success": false,
+  "message": "email: This field is required.",
+  "status": 400,
+  "error": null,
   "data": null,
   "errors": {
-    "detail": "Authentication credentials were not provided."
+    "email": ["This field is required."]
   }
 }
 ```
@@ -1078,10 +1092,7 @@ Response:
   "message": "You are not authorized on this resource",
   "status": 401,
   "error": "UNAUTHORIZED",
-  "data": null,
-  "errors": {
-    "detail": "You are not authorized on this resource"
-  }
+  "data": null
 }
 ```
 

@@ -25,7 +25,8 @@ def custom_exception_handler(exc, context):
     if response is None:
         return response
 
-    message = _get_error_message(response.data)
+    errors = response.data
+    message = _get_error_message(errors)
     error = getattr(exc, "error", None)
 
     response.data = {
@@ -34,8 +35,10 @@ def custom_exception_handler(exc, context):
         "status": response.status_code,
         "error": error,
         "data": None,
-        "errors": response.data,
     }
+    if not isinstance(exc, SecureDocsException):
+        response.data["errors"] = errors
+
     return response
 
 
@@ -47,9 +50,21 @@ def _get_error_message(data):
 
         first_key = next(iter(data), None)
         if first_key:
-            return f"{first_key}: {data[first_key]}"
+            return f"{first_key}: {_stringify_error(data[first_key])}"
 
     if isinstance(data, list) and data:
-        return str(data[0])
+        return _stringify_error(data)
 
     return "Request failed"
+
+
+def _stringify_error(error):
+    if isinstance(error, dict):
+        first_key = next(iter(error), None)
+        if first_key:
+            return _stringify_error(error[first_key])
+
+    if isinstance(error, list) and error:
+        return _stringify_error(error[0])
+
+    return str(error)

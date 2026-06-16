@@ -91,9 +91,6 @@ INVALID_STATUS_EXAMPLE = {
     "status": 400,
     "error": "INVALID_DOCUMENT_STATUS",
     "data": None,
-    "errors": {
-        "detail": "Invalid document status filter",
-    },
 }
 
 
