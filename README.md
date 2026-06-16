@@ -49,9 +49,12 @@ Django 5.2.15
 Django REST Framework 3.17.1
 djangorestframework-simplejwt 5.5.1
 drf-spectacular 0.29.0
+psycopg 3.3.4
+dj-database-url 3.1.2
+python-decouple 3.8
 ```
 
-The next major step is Phase 4: building the document upload module.
+Phase 4 document management is complete. The project is now being moved from SQLite to PostgreSQL for local development.
 
 ## Learning Goals
 
@@ -275,6 +278,7 @@ timestamp
 - ViewSets
 - File uploads
 - Validation
+- Completed
 
 ### Phase 5: Verification Workflow
 
@@ -1113,6 +1117,58 @@ Generate the schema from the command line:
 python manage.py spectacular --file /tmp/secure-docs-schema.yml
 ```
 
+## PostgreSQL Setup
+
+The project now reads database settings from environment variables.
+
+Create a local `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Recommended local `.env` shape:
+
+```env
+PORT=4000
+DEBUG=True
+SECRET_KEY=change-this-local-secret-key
+ALLOWED_HOSTS=localhost,127.0.0.1,testserver
+
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_NAME=secure_docs_db_local
+DATABASE_USER=postgres
+DATABASE_PASSWORD=
+
+LOCAL_SERVER=http://localhost:4000
+STAGING_SERVER=
+PRODUCTION_SERVER=
+```
+
+If your `postgres` user has a password, put it in `DATABASE_PASSWORD`.
+
+You can also use a single URL:
+
+```env
+DATABASE_URL=postgresql://postgres:mypassword%40123@localhost:5432/secure_docs_db_local
+```
+
+If a password contains `@`, write it as `%40` inside `DATABASE_URL`.
+
+Run migrations after PostgreSQL is reachable:
+
+```bash
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+Run the development server on the same style of port you use in other projects:
+
+```bash
+python manage.py runserver 0.0.0.0:4000
+```
+
 ## Local Setup
 
 Activate the virtual environment:
@@ -1129,6 +1185,9 @@ django-admin --version
 pip show djangorestframework
 pip show djangorestframework-simplejwt
 pip show drf-spectacular
+pip show psycopg
+pip show dj-database-url
+pip show python-decouple
 ```
 
 Install dependencies from `requirements.txt` if needed:
@@ -1139,12 +1198,13 @@ pip install -r requirements.txt
 
 ## Next Step
 
-Start Phase 4 document management with Step 1 and Step 2:
+Finish the local PostgreSQL switch:
 
 ```text
-Run current checks
-Design the Document model
-Add verification code generation
+Create or update .env
+Confirm PostgreSQL is running
+Run migrations on secure_docs_db_local
+Create a new PostgreSQL-backed superuser
 ```
 
 After that, the next major milestone will be the verification workflow.
