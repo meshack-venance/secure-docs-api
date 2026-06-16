@@ -8,6 +8,10 @@ from rest_framework.test import APITestCase
 User = get_user_model()
 
 
+def response_body(response):
+    return response.json()
+
+
 @override_settings(ALLOWED_HOSTS=["localhost", "testserver"])
 class AuthenticationTests(APITestCase):
     def setUp(self):
@@ -31,8 +35,11 @@ class AuthenticationTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "User registered successfully")
         self.assertTrue(User.objects.filter(email=self.email).exists())
-        self.assertNotIn("password", response.data)
+        self.assertNotIn("password", body["data"])
 
     def test_user_can_log_in(self):
         User.objects.create_user(email=self.email, password=self.password)
@@ -45,8 +52,11 @@ class AuthenticationTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("access", response.data)
-        self.assertIn("refresh", response.data)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "User logged in successfully")
+        self.assertIn("access", body["data"])
+        self.assertIn("refresh", body["data"])
 
     def test_authenticated_user_can_view_profile(self):
         User.objects.create_user(email=self.email, password=self.password)
@@ -56,18 +66,24 @@ class AuthenticationTests(APITestCase):
             format="json",
             HTTP_HOST="localhost",
         )
-        access_token = login_response.data["access"]
+        access_token = response_body(login_response)["data"]["access"]
 
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access_token}")
         response = self.client.get(self.profile_url, HTTP_HOST="localhost")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["email"], self.email)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "User fetched successfully")
+        self.assertEqual(body["data"]["email"], self.email)
 
     def test_anonymous_user_cannot_view_profile(self):
         response = self.client.get(self.profile_url, HTTP_HOST="localhost")
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertIsNone(body["data"])
 
     def test_superuser_is_created_with_admin_role(self):
         user = User.objects.create_superuser(

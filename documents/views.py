@@ -1,4 +1,5 @@
-from rest_framework import filters, viewsets
+from rest_framework import filters, status, viewsets
+from rest_framework.response import Response
 
 from accounts.models import User
 from documents.models import Category, Document
@@ -13,6 +14,14 @@ class DocumentViewSet(viewsets.ModelViewSet):
     search_fields = ("title", "description", "verification_code")
     ordering_fields = ("created_at", "updated_at", "title", "status")
     ordering = ("-created_at",)
+    response_messages = {
+        "list": "Documents fetched successfully",
+        "create": "Document uploaded successfully",
+        "retrieve": "Document fetched successfully",
+        "update": "Document updated successfully",
+        "partial_update": "Document updated successfully",
+        "destroy": "Document deleted successfully",
+    }
 
     def get_queryset(self):
         user = self.request.user
@@ -39,6 +48,23 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user)
 
+    def destroy(self, request, *args, **kwargs):
+        super().destroy(request, *args, **kwargs)
+        return Response(None, status=status.HTTP_200_OK)
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    response_messages = {
+        "list": "Categories fetched successfully",
+        "create": "Category created successfully",
+        "retrieve": "Category fetched successfully",
+        "update": "Category updated successfully",
+        "partial_update": "Category updated successfully",
+        "destroy": "Category deleted successfully",
+    }
+
+    def destroy(self, request, *args, **kwargs):
+        super().destroy(request, *args, **kwargs)
+        return Response(None, status=status.HTTP_200_OK)

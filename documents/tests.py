@@ -13,6 +13,10 @@ from documents.models import Document
 User = get_user_model()
 
 
+def response_body(response):
+    return response.json()
+
+
 @override_settings(ALLOWED_HOSTS=["localhost", "testserver"])
 class DocumentAPITests(APITestCase):
     def setUp(self):
@@ -44,7 +48,8 @@ class DocumentAPITests(APITestCase):
             format="json",
             HTTP_HOST="localhost",
         )
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
+        token = response_body(response)["data"]["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
     def upload_file(self, name="document.txt", content=b"test document"):
         return SimpleUploadedFile(name, content, content_type="text/plain")
@@ -71,6 +76,9 @@ class DocumentAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "Document uploaded successfully")
         self.assertEqual(Document.objects.count(), 1)
         self.assertEqual(Document.objects.first().uploaded_by, self.user)
 
@@ -86,6 +94,9 @@ class DocumentAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertIsNone(body["data"])
 
     def test_user_can_list_only_own_documents(self):
         own_document = self.create_document(self.user, title="Mine")
@@ -95,7 +106,10 @@ class DocumentAPITests(APITestCase):
         response = self.client.get(self.list_url, HTTP_HOST="localhost")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        document_ids = [item["id"] for item in response.data["results"]]
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "Documents fetched successfully")
+        document_ids = [item["id"] for item in body["data"]["results"]]
         self.assertEqual(document_ids, [own_document.id])
 
     def test_admin_can_list_all_documents(self):
@@ -106,7 +120,8 @@ class DocumentAPITests(APITestCase):
         response = self.client.get(self.list_url, HTTP_HOST="localhost")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        document_ids = {item["id"] for item in response.data["results"]}
+        body = response_body(response)
+        document_ids = {item["id"] for item in body["data"]["results"]}
         self.assertEqual(document_ids, {first_document.id, second_document.id})
 
     def test_document_receives_verification_code_and_pending_status(self):
@@ -125,7 +140,10 @@ class DocumentAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["id"], document.id)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "Document fetched successfully")
+        self.assertEqual(body["data"]["id"], document.id)
 
     def test_user_cannot_retrieve_another_users_document(self):
         document = self.create_document(self.other_user)
@@ -137,3 +155,22 @@ class DocumentAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertIsNone(body["data"])
+
+    def test_user_can_delete_own_document(self):
+        document = self.create_document(self.user)
+        self.authenticate(self.user)
+
+        response = self.client.delete(
+            reverse("documents:document-detail", kwargs={"pk": document.id}),
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "Document deleted successfully")
+        self.assertIsNone(body["data"])
+        self.assertFalse(Document.objects.filter(id=document.id).exists())

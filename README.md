@@ -114,6 +114,46 @@ GET /api/schema/
 GET /api/docs/
 ```
 
+### Standard API Response Format
+
+All JSON API responses are wrapped in one consistent envelope, similar to the response DTO style commonly used in NestJS or Spring Boot controllers.
+
+Successful response:
+
+```json
+{
+  "success": true,
+  "message": "Document fetched successfully",
+  "data": {
+    "id": 1,
+    "title": "Degree Certificate",
+    "status": "PENDING"
+  }
+}
+```
+
+Error response:
+
+```json
+{
+  "success": false,
+  "message": "Authentication credentials were not provided.",
+  "data": null,
+  "errors": {
+    "detail": "Authentication credentials were not provided."
+  }
+}
+```
+
+In this project:
+
+```text
+common/renderers.py    -> wraps normal successful API responses
+common/exceptions.py   -> wraps validation, permission, auth, and not-found errors
+view.response_message  -> sets the success message for a simple view
+view.response_messages -> sets success messages per ViewSet action
+```
+
 ### Document Management
 
 Planned endpoints:
