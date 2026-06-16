@@ -178,6 +178,45 @@ class DocumentAPITests(APITestCase):
         self.assertEqual(body["message"], "Document fetched successfully")
         self.assertEqual(body["data"]["id"], document.id)
 
+    def test_user_can_patch_own_document(self):
+        document = self.create_document(self.user)
+        self.authenticate(self.user)
+
+        response = self.client.patch(
+            self.detail_url(document),
+            {"description": "Updated from PATCH only."},
+            format="json",
+            HTTP_HOST="localhost",
+        )
+
+        document.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        body = response_body(response)
+        self.assertTrue(body["success"])
+        self.assertEqual(body["message"], "Document updated successfully")
+        self.assertEqual(body["data"]["description"], "Updated from PATCH only.")
+        self.assertEqual(document.description, "Updated from PATCH only.")
+
+    def test_put_document_update_is_not_allowed(self):
+        document = self.create_document(self.user)
+        self.authenticate(self.user)
+
+        response = self.client.put(
+            self.detail_url(document),
+            {
+                "title": "Full replacement",
+                "description": "PUT should not be allowed.",
+                "file": self.upload_file(),
+            },
+            format="multipart",
+            HTTP_HOST="localhost",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        body = response_body(response)
+        self.assertFalse(body["success"])
+        self.assertEqual(body["message"], 'Method "PUT" not allowed.')
+
     def test_user_cannot_retrieve_another_users_document(self):
         document = self.create_document(self.other_user)
         self.authenticate(self.user)

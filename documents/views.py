@@ -187,36 +187,6 @@ INVALID_STATUS_EXAMPLE = {
             ),
         ],
     ),
-    update=extend_schema(
-        summary="Update document",
-        description="Replace editable document fields.",
-        request={"multipart/form-data": DocumentCreateSerializer},
-        examples=[
-            OpenApiExample(
-                "Document update request",
-                value={
-                    "title": "Updated Degree Certificate",
-                    "file": "<binary file>",
-                    "document_type": "Certificate",
-                    "description": "Updated certificate description",
-                },
-                request_only=True,
-            ),
-            OpenApiExample(
-                "Document updated response",
-                value={
-                    "success": True,
-                    "message": "Document updated successfully",
-                    "data": {
-                        **DOCUMENT_EXAMPLE,
-                        "title": "Updated Degree Certificate",
-                        "description": "Updated certificate description",
-                    },
-                },
-                response_only=True,
-            ),
-        ],
-    ),
     partial_update=extend_schema(
         summary="Partially update document",
         description="Update one or more editable document fields.",
@@ -281,6 +251,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     queryset = Document.objects.select_related("uploaded_by", "reviewed_by")
     permission_classes = (CanAccessDocument,)
     parser_classes = (JSONParser, MultiPartParser, FormParser)
+    http_method_names = ("get", "post", "patch", "delete", "head", "options")
     filter_backends = (filters.SearchFilter, filters.OrderingFilter)
     search_fields = ("title", "description", "verification_code")
     ordering_fields = ("created_at", "updated_at", "title", "status")
@@ -289,7 +260,6 @@ class DocumentViewSet(viewsets.ModelViewSet):
         "list": "Documents fetched successfully",
         "create": "Document uploaded successfully",
         "retrieve": "Document fetched successfully",
-        "update": "Document updated successfully",
         "partial_update": "Document updated successfully",
         "destroy": "Document deleted successfully",
     }

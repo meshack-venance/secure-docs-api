@@ -254,7 +254,6 @@ This creates endpoints like:
 GET    /api/documents/
 POST   /api/documents/
 GET    /api/documents/{id}/
-PUT    /api/documents/{id}/
 PATCH  /api/documents/{id}/
 DELETE /api/documents/{id}/
 ```
@@ -654,10 +653,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
 list           GET /api/documents/
 create         POST /api/documents/
 retrieve       GET /api/documents/{id}/
-update         PUT /api/documents/{id}/
 partial_update PATCH /api/documents/{id}/
 destroy        DELETE /api/documents/{id}/
 ```
+
+DRF can generate `PUT` through the `update` action, but this project disables `PUT` for documents and keeps only `PATCH` for edits.
 
 Spring Boot comparison:
 

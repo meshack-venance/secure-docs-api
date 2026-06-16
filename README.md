@@ -203,6 +203,7 @@ DELETE /api/documents/{id}/
 ```
 
 Document create/update endpoints accept `multipart/form-data` so files can be uploaded from Swagger.
+Document edits use `PATCH`; full `PUT` replacement is disabled.
 
 Form-data fields:
 
