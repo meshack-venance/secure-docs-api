@@ -138,6 +138,7 @@ JWT_SIGNING_KEY is read from the environment.
 Protected endpoints validate the token and load the current user from the database.
 Deleted, inactive, or invalid-role users cannot use old access tokens.
 Authorization decisions use the database user role, not a role claim from the token.
+Account-state authentication failures return one generic message and log the internal reason server-side.
 ```
 
 ### API Documentation

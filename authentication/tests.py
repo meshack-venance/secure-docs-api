@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 
 
 User = get_user_model()
+AUTHENTICATION_FAILED_MESSAGE = "Authentication credentials are invalid"
 
 
 def response_body(response):
@@ -98,7 +99,7 @@ class AuthenticationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         body = response_body(response)
         self.assertFalse(body["success"])
-        self.assertEqual(body["message"], "User not found")
+        self.assertEqual(body["message"], AUTHENTICATION_FAILED_MESSAGE)
         self.assertIsNone(body["data"])
 
     def test_inactive_user_cannot_use_old_access_token(self):
@@ -116,7 +117,7 @@ class AuthenticationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         body = response_body(response)
         self.assertFalse(body["success"])
-        self.assertEqual(body["message"], "User is inactive")
+        self.assertEqual(body["message"], AUTHENTICATION_FAILED_MESSAGE)
         self.assertIsNone(body["data"])
 
     def test_user_with_invalid_database_role_cannot_use_access_token(self):
@@ -133,7 +134,7 @@ class AuthenticationTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         body = response_body(response)
         self.assertFalse(body["success"])
-        self.assertEqual(body["message"], "User account has an invalid role")
+        self.assertEqual(body["message"], AUTHENTICATION_FAILED_MESSAGE)
         self.assertIsNone(body["data"])
 
     def test_refresh_token_rotation_returns_new_refresh_token(self):
