@@ -57,6 +57,122 @@ python-decouple 3.8
 
 Phase 4 document management is complete. The project is now being moved from SQLite to PostgreSQL for local development.
 
+## Fresh Clone Setup
+
+Use this path when setting up the project on a new machine.
+
+### Prerequisites
+
+```text
+Python 3.12+
+PostgreSQL
+Git
+make
+```
+
+### 1. Clone the Project
+
+```bash
+git clone <repo-url>
+cd secure-docs-api
+```
+
+### 2. Create and Activate Virtual Environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Create Local Environment File
+
+```bash
+cp .env.example .env
+```
+
+Update at least these values:
+
+```env
+SECRET_KEY=change-this-local-secret-key
+JWT_SIGNING_KEY=change-this-to-a-long-random-jwt-signing-key
+DATABASE_NAME=secure_docs_db_local
+DATABASE_USER=postgres
+DATABASE_PASSWORD=
+```
+
+### 5. Create PostgreSQL Database
+
+If your local PostgreSQL user can create databases:
+
+```bash
+createdb secure_docs_db_local
+```
+
+Or from `psql`:
+
+```sql
+CREATE DATABASE secure_docs_db_local;
+```
+
+### 6. Apply Migrations
+
+```bash
+make migrate
+```
+
+### 7. Create Admin User
+
+```bash
+make createsuperuser
+```
+
+### 8. Verify the Project
+
+```bash
+make verify
+```
+
+### 9. Start the Server
+
+```bash
+make run
+```
+
+Open Swagger:
+
+```text
+http://localhost:4000/api/docs/
+```
+
+### Daily Developer Commands
+
+```bash
+make run
+make test
+make test-app APP=documents
+make makemigrations
+make migrate
+make schema
+make verify
+```
+
+### Common First-Run Issues
+
+```text
+PostgreSQL is not running        -> start PostgreSQL, then run make migrate
+database does not exist          -> create secure_docs_db_local
+missing .env                     -> cp .env.example .env
+port 4000 already in use         -> make run PORT=8000
+unapplied migrations             -> make migrate
+dependencies missing             -> activate venv and run pip install -r requirements.txt
+```
+
 ## Learning Goals
 
 This project will cover:
