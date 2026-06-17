@@ -1279,6 +1279,30 @@ Generate the schema from the command line:
 python manage.py spectacular --file /tmp/secure-docs-schema.yml
 ```
 
+## Common Make Commands
+
+The project includes a `Makefile` for common local commands:
+
+```bash
+make help
+make run
+make check
+make test
+make test-app APP=authentication
+make schema
+make migration-check
+make verify
+make migrate
+make createsuperuser
+```
+
+By default, `make run` starts the server on port `4000`.
+You can override it:
+
+```bash
+make run PORT=8000
+```
+
 ## PostgreSQL Setup
 
 The project now reads database settings from environment variables.
