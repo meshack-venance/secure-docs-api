@@ -102,12 +102,35 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+
+LOCAL_SERVER = config('LOCAL_SERVER', default='http://localhost:4000')
+STAGING_SERVER = config('STAGING_SERVER', default='')
+PRODUCTION_SERVER = config('PRODUCTION_SERVER', default='')
+SARTIFY_SERVER = config('SARTIFY_SERVER', default='')
+
+
+def openapi_servers():
+    """Expose selectable Swagger servers from environment configuration."""
+    servers = (
+        (LOCAL_SERVER, 'Server URL in Development environment'),
+        (STAGING_SERVER, 'Server URL in Staging environment'),
+        (PRODUCTION_SERVER, 'Server URL in Production environment'),
+        (SARTIFY_SERVER, 'Server URL in Sartify environment'),
+    )
+    return [
+        {'url': url, 'description': description}
+        for url, description in servers
+        if url
+    ]
+
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Secure Document Verification API',
     'DESCRIPTION': 'API for uploading, reviewing, approving, rejecting, and verifying documents.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
+    'SERVERS': openapi_servers(),
 }
 
 DATABASE_URL = config('DATABASE_URL', default='')

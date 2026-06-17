@@ -1305,6 +1305,7 @@ DATABASE_PASSWORD=
 LOCAL_SERVER=http://localhost:4000
 STAGING_SERVER=
 PRODUCTION_SERVER=
+SARTIFY_SERVER=
 ```
 
 If your `postgres` user has a password, put it in `DATABASE_PASSWORD`.
